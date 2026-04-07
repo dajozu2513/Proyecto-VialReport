@@ -1,0 +1,31 @@
+# Build outputs
+build/
+.gradle/
+*.class
+*.jar
+*.war
+*.aar
+*.ap_
+
+# Android
+local.properties
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iws
+*.ipr
+out/
+
+# Kotlin
+*.kotlin_module
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude local settings
+.claude/settings.local.json

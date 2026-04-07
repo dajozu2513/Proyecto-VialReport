@@ -1,0 +1,43 @@
+package com.vialreport.backend.dto
+
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class ApiResponse<T>(
+    val success: Boolean,
+    val message: String,
+    val data: T? = null
+)
+
+// Respuestas de auth
+@Serializable
+data class LoginRequest(
+    val email: String,
+    val password: String
+)
+
+@Serializable
+data class RegisterRequest(
+    val name: String,
+    val email: String,
+    val password: String,
+    val phone: String? = null,
+    val role: String = "citizen"
+)
+
+@Serializable
+data class AuthResponse(
+    val token: String,
+    val user: UserResponse
+)
+
+// Respuesta de usuario (sin password)
+@Serializable
+data class UserResponse(
+    val id: Int,
+    val name: String,
+    val email: String,
+    val role: String,
+    val phone: String? = null,
+    val createdAt: String
+)

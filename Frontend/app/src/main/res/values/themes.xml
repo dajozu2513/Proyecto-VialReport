@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.VialReportApp" parent="Theme.AppCompat.DayNight.NoActionBar" />
+</resources>
