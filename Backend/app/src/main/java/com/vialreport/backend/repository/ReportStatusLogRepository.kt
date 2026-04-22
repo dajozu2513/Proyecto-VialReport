@@ -3,6 +3,7 @@ package com.vialreport.backend.repository
 import com.vialreport.backend.model.ReportStatusLog
 import com.vialreport.backend.model.ReportStatusLogs
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.transactions.transaction
 
 class ReportStatusLogRepository {
 
@@ -16,9 +17,8 @@ class ReportStatusLogRepository {
         changedAt = row[ReportStatusLogs.changedAt]
     )
 
-    fun findByReport(reportId: Int): List<ReportStatusLog> {
-        return ReportStatusLogs
-            .select { ReportStatusLogs.reportId eq reportId }
+    fun findByReport(reportId: Int): List<ReportStatusLog> = transaction {
+        ReportStatusLogs.select { ReportStatusLogs.reportId eq reportId }
             .orderBy(ReportStatusLogs.changedAt, SortOrder.DESC)
             .map { rowToLog(it) }
     }
@@ -29,7 +29,7 @@ class ReportStatusLogRepository {
         oldStatus: String,
         newStatus: String,
         note: String?
-    ): ReportStatusLog {
+    ): ReportStatusLog = transaction {
         val id = ReportStatusLogs.insertAndGetId {
             it[ReportStatusLogs.reportId]  = reportId
             it[ReportStatusLogs.changedBy] = changedBy
@@ -37,6 +37,6 @@ class ReportStatusLogRepository {
             it[ReportStatusLogs.newStatus] = newStatus
             it[ReportStatusLogs.note]      = note
         }
-        return findByReport(reportId).first { it.id == id.value }
+        ReportStatusLogs.select { ReportStatusLogs.id eq id }.map { rowToLog(it) }.single()
     }
 }

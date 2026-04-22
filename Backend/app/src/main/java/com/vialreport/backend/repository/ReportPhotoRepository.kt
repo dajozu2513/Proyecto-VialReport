@@ -3,6 +3,7 @@ package com.vialreport.backend.repository
 import com.vialreport.backend.model.ReportPhoto
 import com.vialreport.backend.model.ReportPhotos
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.transactions.transaction
 
 class ReportPhotoRepository {
 
@@ -13,15 +14,15 @@ class ReportPhotoRepository {
         uploadedAt = row[ReportPhotos.uploadedAt]
     )
 
-    fun findByReport(reportId: Int): List<ReportPhoto> =
-        ReportPhotos.select { ReportPhotos.reportId eq reportId }
-            .map { rowToPhoto(it) }
+    fun findByReport(reportId: Int): List<ReportPhoto> = transaction {
+        ReportPhotos.select { ReportPhotos.reportId eq reportId }.map { rowToPhoto(it) }
+    }
 
-    fun create(reportId: Int, url: String): ReportPhoto {
+    fun create(reportId: Int, url: String): ReportPhoto = transaction {
         val id = ReportPhotos.insertAndGetId {
             it[ReportPhotos.reportId] = reportId
             it[ReportPhotos.url]      = url
         }
-        return findByReport(reportId).first { it.id == id.value }
+        ReportPhotos.select { ReportPhotos.id eq id }.map { rowToPhoto(it) }.single()
     }
 }

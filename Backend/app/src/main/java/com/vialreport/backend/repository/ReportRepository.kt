@@ -4,6 +4,7 @@ import com.vialreport.backend.model.Report
 import com.vialreport.backend.model.Reports
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.transactions.transaction
 import java.time.LocalDateTime
 
 class ReportRepository {
@@ -24,39 +25,27 @@ class ReportRepository {
         updatedAt   = row[Reports.updatedAt]
     )
 
-    fun findById(id: Int): Report? {
-        return Reports
-            .select { Reports.id eq id }
-            .map { rowToReport(it) }
-            .singleOrNull()
+    fun findById(id: Int): Report? = transaction {
+        Reports.select { Reports.id eq id }.map { rowToReport(it) }.singleOrNull()
     }
 
-    fun findAll(): List<Report> {
-        return Reports
-            .selectAll()
-            .orderBy(Reports.createdAt, SortOrder.DESC)
-            .map { rowToReport(it) }
+    fun findAll(): List<Report> = transaction {
+        Reports.selectAll().orderBy(Reports.createdAt, SortOrder.DESC).map { rowToReport(it) }
     }
 
-    fun findByCitizen(citizenId: Int): List<Report> {
-        return Reports
-            .select { Reports.citizenId eq citizenId }
-            .orderBy(Reports.createdAt, SortOrder.DESC)
-            .map { rowToReport(it) }
+    fun findByCitizen(citizenId: Int): List<Report> = transaction {
+        Reports.select { Reports.citizenId eq citizenId }
+            .orderBy(Reports.createdAt, SortOrder.DESC).map { rowToReport(it) }
     }
 
-    fun findByStatus(status: String): List<Report> {
-        return Reports
-            .select { Reports.status eq status }
-            .orderBy(Reports.createdAt, SortOrder.DESC)
-            .map { rowToReport(it) }
+    fun findByStatus(status: String): List<Report> = transaction {
+        Reports.select { Reports.status eq status }
+            .orderBy(Reports.createdAt, SortOrder.DESC).map { rowToReport(it) }
     }
 
-    fun findByCrew(crewId: Int): List<Report> {
-        return Reports
-            .select { Reports.crewId eq crewId }
-            .orderBy(Reports.createdAt, SortOrder.DESC)
-            .map { rowToReport(it) }
+    fun findByCrew(crewId: Int): List<Report> = transaction {
+        Reports.select { Reports.crewId eq crewId }
+            .orderBy(Reports.createdAt, SortOrder.DESC).map { rowToReport(it) }
     }
 
     fun create(
@@ -68,7 +57,7 @@ class ReportRepository {
         latitude: Double,
         longitude: Double,
         address: String
-    ): Report {
+    ): Report = transaction {
         val id = Reports.insertAndGetId {
             it[Reports.citizenId]   = citizenId
             it[Reports.typeId]      = typeId
@@ -79,20 +68,19 @@ class ReportRepository {
             it[Reports.longitude]   = longitude
             it[Reports.address]     = address
         }
-        return findById(id.value)!!
+        Reports.select { Reports.id eq id }.map { rowToReport(it) }.single()
     }
 
-    fun updateStatus(id: Int, status: String, crewId: Int?): Report? {
+    fun updateStatus(id: Int, status: String, crewId: Int?): Report? = transaction {
         Reports.update({ Reports.id eq id }) {
             it[Reports.status]    = status
             it[Reports.updatedAt] = LocalDateTime.now()
             if (crewId != null) it[Reports.crewId] = crewId
         }
-        return findById(id)
+        Reports.select { Reports.id eq id }.map { rowToReport(it) }.singleOrNull()
     }
 
-    fun delete(id: Int): Boolean {
-        return Reports
-            .deleteWhere { Reports.id eq id } > 0
+    fun delete(id: Int): Boolean = transaction {
+        Reports.deleteWhere { Reports.id eq id } > 0
     }
 }
