@@ -22,6 +22,7 @@ data class RegisterRequest(
     val email: String,
     val password: String,
     val phone: String? = null,
+    val cedula: String? = null,
     val role: String = "citizen"
 )
 
@@ -31,7 +32,7 @@ data class AuthResponse(
     val user: UserResponse
 )
 
-// Respuesta de usuario (sin password)
+// Respuesta de usuario (sin password ni cedula)
 @Serializable
 data class UserResponse(
     val id: Int,
@@ -39,5 +40,6 @@ data class UserResponse(
     val email: String,
     val role: String,
     val phone: String? = null,
+    val isVerified: Boolean,
     val createdAt: String
 )

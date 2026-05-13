@@ -2,43 +2,55 @@
   "info": {
     "name": "VialReport API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "REST API for VialReport — road incident reporting app. Base URL: {{baseUrl}}\n\nSetup:\n1. Set {{baseUrl}} to http://localhost:8080\n2. Run POST /auth/login — the token is saved automatically to {{token}}"
+    "description": "REST API para VialReport — sistema de reporte de incidentes viales.\nBase URL: {{baseUrl}}\n\nSetup rápido:\n1. Establece {{baseUrl}} en http://localhost:8080\n2. Ejecuta POST /auth/login — el token se guarda automáticamente en {{token}}\n3. Usa los demás endpoints con Authorization: Bearer {{token}}"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8080", "type": "string" },
-    { "key": "token",   "value": "",                      "type": "string" },
-    { "key": "reportId","value": "1",                     "type": "string" },
-    { "key": "crewId",  "value": "1",                     "type": "string" },
-    { "key": "notifId", "value": "1",                     "type": "string" }
+    { "key": "baseUrl",  "value": "http://localhost:8080", "type": "string" },
+    { "key": "token",    "value": "",                      "type": "string" },
+    { "key": "reportId", "value": "1",                     "type": "string" },
+    { "key": "crewId",   "value": "1",                     "type": "string" },
+    { "key": "notifId",  "value": "1",                     "type": "string" }
   ],
   "item": [
+
     {
       "name": "Auth",
       "item": [
         {
-          "name": "Register",
+          "name": "Register (Citizen)",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth","register"] },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Juan Perez\",\n  \"email\": \"juan@example.com\",\n  \"password\": \"securePass123\",\n  \"phone\": \"+52 555 123 4567\",\n  \"role\": \"citizen\"\n}"
-            }
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"name\": \"María Rodríguez\",\n  \"email\": \"maria@example.com\",\n  \"password\": \"seguraPass123\",\n  \"phone\": \"+506 8888 1234\",\n  \"cedula\": \"1-1234-5678\",\n  \"role\": \"citizen\"\n}"
+            },
+            "description": "Registra un ciudadano. El campo cedula es opcional."
           },
-          "response": [],
-          "_postman_previewlanguage": "json"
+          "response": []
         },
         {
           "name": "Register (Admin)",
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth","register"] },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            },
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Admin VialReport\",\n  \"email\": \"admin@vialreport.com\",\n  \"password\": \"adminPass456\",\n  \"role\": \"admin\"\n}"
-            }
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"name\": \"Admin Municipal\",\n  \"email\": \"admin@municipalidad.go.cr\",\n  \"password\": \"adminPass456\",\n  \"role\": \"admin\"\n}"
+            },
+            "description": "Registra un usuario con rol admin."
           },
           "response": []
         },
@@ -61,22 +73,43 @@
           ],
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth","login"] },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"juan@example.com\",\n  \"password\": \"securePass123\"\n}"
-            }
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"email\": \"admin@municipalidad.go.cr\",\n  \"password\": \"adminPass456\"\n}"
+            },
+            "description": "El token JWT se guarda automáticamente en {{token}}."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Profile (GET /auth/me)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Devuelve el perfil del usuario autenticado según el JWT."
           },
           "response": []
         }
       ]
     },
+
     {
       "name": "Reports",
       "item": [
         {
-          "name": "Get All Reports",
+          "name": "Get All Reports (Admin - sin filtros)",
           "request": {
             "method": "GET",
             "url": {
@@ -84,21 +117,41 @@
               "host": ["{{baseUrl}}"],
               "path": ["reports"]
             },
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Admin ve todos los reportes. Ciudadano ve solo los suyos."
           },
           "response": []
         },
         {
-          "name": "Get All Reports (Admin - filter by status)",
+          "name": "Get Reports (Admin - filtros combinados)",
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/reports?status=new",
+              "raw": "{{baseUrl}}/reports?status=new&typeId=1&zone=Centro",
               "host": ["{{baseUrl}}"],
               "path": ["reports"],
-              "query": [{ "key": "status", "value": "new", "description": "Valores: new | verified | in_progress | repairing | resolved | rejected | duplicate" }]
+              "query": [
+                { "key": "status", "value": "new",    "description": "new | verified | in_progress | repairing | resolved | rejected | duplicate" },
+                { "key": "typeId", "value": "1",      "description": "ID del tipo de incidente" },
+                { "key": "zone",   "value": "Centro", "description": "Filtra por substring en el campo address" }
+              ]
             },
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Filtros opcionales para admin. Cualquier combinación es válida."
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Reports (Ciudadano)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports"]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Cuando el token es de un ciudadano, devuelve solo sus propios reportes."
           },
           "response": []
         },
@@ -106,13 +159,17 @@
           "name": "Get Report by ID",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/reports/{{reportId}}", "host": ["{{baseUrl}}"], "path": ["reports","{{reportId}}"] },
+            "url": {
+              "raw": "{{baseUrl}}/reports/{{reportId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "{{reportId}}"]
+            },
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
           },
           "response": []
         },
         {
-          "name": "Create Report",
+          "name": "Create Report (Ciudadano)",
           "event": [
             {
               "listen": "test",
@@ -130,15 +187,21 @@
           ],
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/reports", "host": ["{{baseUrl}}"], "path": ["reports"] },
+            "url": {
+              "raw": "{{baseUrl}}/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports"]
+            },
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type",  "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"typeId\": 1,\n  \"title\": \"Bache profundo en Av. Reforma\",\n  \"description\": \"Bache de aproximadamente 30 cm de diámetro y 10 cm de profundidad que representa un peligro para los vehículos.\",\n  \"latitude\": 19.4326,\n  \"longitude\": -99.1332,\n  \"address\": \"Av. Paseo de la Reforma 100, Ciudad de México\"\n}"
-            }
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"typeId\": 1,\n  \"title\": \"Bache en Avenida Central\",\n  \"description\": \"Bache de aproximadamente 40 cm de diámetro que representa peligro para motocicletas y ciclistas.\",\n  \"latitude\": 9.9325,\n  \"longitude\": -84.0795,\n  \"address\": \"Avenida Central, San José, Costa Rica\",\n  \"zone\": \"Centro\"\n}"
+            },
+            "description": "Solo ciudadanos pueden crear reportes. El reportId se guarda automáticamente en {{reportId}}."
           },
           "response": []
         },
@@ -146,16 +209,21 @@
           "name": "Update Report Status (Admin)",
           "request": {
             "method": "PUT",
-            "url": { "raw": "{{baseUrl}}/reports/{{reportId}}/status", "host": ["{{baseUrl}}"], "path": ["reports","{{reportId}}","status"] },
+            "url": {
+              "raw": "{{baseUrl}}/reports/{{reportId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "{{reportId}}", "status"]
+            },
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type",  "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
+              "options": { "raw": { "language": "json" } },
               "raw": "{\n  \"status\": \"verified\",\n  \"note\": \"Reporte verificado por inspector de campo.\",\n  \"crewId\": 1\n}"
             },
-            "description": "Admin only. Statuses: new | verified | in_progress | repairing | resolved | rejected | duplicate"
+            "description": "Solo admin. Estados válidos: new | verified | in_progress | repairing | resolved | rejected | duplicate"
           },
           "response": []
         },
@@ -163,13 +231,126 @@
           "name": "Delete Report",
           "request": {
             "method": "DELETE",
-            "url": { "raw": "{{baseUrl}}/reports/{{reportId}}", "host": ["{{baseUrl}}"], "path": ["reports","{{reportId}}"] },
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "url": {
+              "raw": "{{baseUrl}}/reports/{{reportId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "{{reportId}}"]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "El dueño del reporte o un admin pueden eliminarlo."
           },
           "response": []
         }
       ]
     },
+
+    {
+      "name": "Photos",
+      "item": [
+        {
+          "name": "Upload Photo (POST /reports/:id/photos)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/reports/{{reportId}}/photos",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "{{reportId}}", "photos"]
+            },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "src": "",
+                  "description": "Imagen JPG, PNG o WebP. Máx 10 MB. La IA valida que sea un incidente vial real."
+                }
+              ]
+            },
+            "description": "El ciudadano dueño del reporte o un admin pueden subir fotos. La imagen pasa por el filtro de IA (Claude Haiku) antes de guardarse."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Report Photos (GET /reports/:id/photos)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/reports/{{reportId}}/photos",
+              "host": ["{{baseUrl}}"],
+              "path": ["reports", "{{reportId}}", "photos"]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Solo admin puede listar las fotos de un reporte."
+          },
+          "response": []
+        }
+      ]
+    },
+
+    {
+      "name": "Map",
+      "item": [
+        {
+          "name": "Heatmap Data (GET /map/heatmap)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/map/heatmap",
+              "host": ["{{baseUrl}}"],
+              "path": ["map", "heatmap"],
+              "query": [
+                { "key": "typeId", "value": "1",      "disabled": true, "description": "Filtra por tipo de incidente" },
+                { "key": "zone",   "value": "Centro", "disabled": true, "description": "Filtra por zona (substring de address)" },
+                { "key": "status", "value": "new",    "disabled": true, "description": "Filtra por estado" }
+              ]
+            },
+            "description": "Endpoint público (sin auth). Devuelve puntos agrupados por lat/lng redondeada a 3 decimales (~111m). Excluye reportes con status rejected o duplicate."
+          },
+          "response": []
+        },
+        {
+          "name": "Map Reports (GET /map/reports)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/map/reports",
+              "host": ["{{baseUrl}}"],
+              "path": ["map", "reports"],
+              "query": [
+                { "key": "typeId", "value": "1",      "disabled": true, "description": "Filtra por tipo de incidente" },
+                { "key": "zone",   "value": "Centro", "disabled": true, "description": "Filtra por zona (substring de address)" }
+              ]
+            },
+            "description": "Endpoint público (sin auth). Versión simplificada para el mapa: id, lat, lng, status, typeName, zone."
+          },
+          "response": []
+        }
+      ]
+    },
+
+    {
+      "name": "Incident Types",
+      "item": [
+        {
+          "name": "Get All Incident Types (GET /incident-types)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/incident-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["incident-types"]
+            },
+            "description": "Endpoint público (sin auth). Devuelve los tipos de incidente para poblar dropdowns en la app."
+          },
+          "response": []
+        }
+      ]
+    },
+
     {
       "name": "Crews",
       "item": [
@@ -177,7 +358,11 @@
           "name": "Get All Crews",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/crews", "host": ["{{baseUrl}}"], "path": ["crews"] },
+            "url": {
+              "raw": "{{baseUrl}}/crews",
+              "host": ["{{baseUrl}}"],
+              "path": ["crews"]
+            },
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
           },
           "response": []
@@ -186,8 +371,13 @@
           "name": "Get Available Crews",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/crews/available", "host": ["{{baseUrl}}"], "path": ["crews","available"] },
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "url": {
+              "raw": "{{baseUrl}}/crews/available",
+              "host": ["{{baseUrl}}"],
+              "path": ["crews", "available"]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Devuelve solo las cuadrillas con available = true."
           },
           "response": []
         },
@@ -195,7 +385,11 @@
           "name": "Get Crew by ID",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/crews/{{crewId}}", "host": ["{{baseUrl}}"], "path": ["crews","{{crewId}}"] },
+            "url": {
+              "raw": "{{baseUrl}}/crews/{{crewId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["crews", "{{crewId}}"]
+            },
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
           },
           "response": []
@@ -219,15 +413,21 @@
           ],
           "request": {
             "method": "POST",
-            "url": { "raw": "{{baseUrl}}/crews", "host": ["{{baseUrl}}"], "path": ["crews"] },
+            "url": {
+              "raw": "{{baseUrl}}/crews",
+              "host": ["{{baseUrl}}"],
+              "path": ["crews"]
+            },
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type",  "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Cuadrilla Norte\",\n  \"zone\": \"Delegación Cuauhtémoc\"\n}"
-            }
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"name\": \"Cuadrilla Norte\",\n  \"zone\": \"Zona Norte de San José\"\n}"
+            },
+            "description": "Solo admin. El crewId se guarda automáticamente en {{crewId}}."
           },
           "response": []
         },
@@ -235,15 +435,21 @@
           "name": "Update Crew Availability (Admin)",
           "request": {
             "method": "PATCH",
-            "url": { "raw": "{{baseUrl}}/crews/{{crewId}}/availability", "host": ["{{baseUrl}}"], "path": ["crews","{{crewId}}","availability"] },
+            "url": {
+              "raw": "{{baseUrl}}/crews/{{crewId}}/availability",
+              "host": ["{{baseUrl}}"],
+              "path": ["crews", "{{crewId}}", "availability"]
+            },
             "header": [
               { "key": "Authorization", "value": "Bearer {{token}}" },
               { "key": "Content-Type",  "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
+              "options": { "raw": { "language": "json" } },
               "raw": "{\n  \"available\": false\n}"
-            }
+            },
+            "description": "Solo admin. Cambia la disponibilidad de la cuadrilla."
           },
           "response": []
         },
@@ -251,13 +457,19 @@
           "name": "Delete Crew (Admin)",
           "request": {
             "method": "DELETE",
-            "url": { "raw": "{{baseUrl}}/crews/{{crewId}}", "host": ["{{baseUrl}}"], "path": ["crews","{{crewId}}"] },
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "url": {
+              "raw": "{{baseUrl}}/crews/{{crewId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["crews", "{{crewId}}"]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Solo admin."
           },
           "response": []
         }
       ]
     },
+
     {
       "name": "Notifications",
       "item": [
@@ -265,8 +477,13 @@
           "name": "Get My Notifications",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/notifications", "host": ["{{baseUrl}}"], "path": ["notifications"] },
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Devuelve todas las notificaciones del usuario autenticado."
           },
           "response": []
         },
@@ -274,8 +491,13 @@
           "name": "Get Unread Notifications",
           "request": {
             "method": "GET",
-            "url": { "raw": "{{baseUrl}}/notifications/unread", "host": ["{{baseUrl}}"], "path": ["notifications","unread"] },
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+            "url": {
+              "raw": "{{baseUrl}}/notifications/unread",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "unread"]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Devuelve solo las notificaciones no leídas."
           },
           "response": []
         },
@@ -283,7 +505,11 @@
           "name": "Mark Notification as Read",
           "request": {
             "method": "PATCH",
-            "url": { "raw": "{{baseUrl}}/notifications/{{notifId}}/read", "host": ["{{baseUrl}}"], "path": ["notifications","{{notifId}}","read"] },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notifId}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "{{notifId}}", "read"]
+            },
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
           },
           "response": []
@@ -292,12 +518,37 @@
           "name": "Mark All Notifications as Read",
           "request": {
             "method": "PATCH",
-            "url": { "raw": "{{baseUrl}}/notifications/read-all", "host": ["{{baseUrl}}"], "path": ["notifications","read-all"] },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "read-all"]
+            },
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
           },
           "response": []
         }
       ]
+    },
+
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Get Stats (GET /admin/stats)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "stats"]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Solo admin (403 si el token es de ciudadano). Devuelve: totalReports, byStatus, byType, byZone, todayReports, resolvedToday, avgResolutionHours."
+          },
+          "response": []
+        }
+      ]
     }
+
   ]
 }

@@ -15,6 +15,8 @@ class UserRepository {
         passwordHash = row[Users.passwordHash],
         role         = row[Users.role],
         phone        = row[Users.phone],
+        cedula       = row[Users.cedula],
+        isVerified   = row[Users.isVerified],
         createdAt    = row[Users.createdAt]
     )
 
@@ -35,7 +37,8 @@ class UserRepository {
         email: String,
         passwordHash: String,
         role: String,
-        phone: String?
+        phone: String?,
+        cedula: String? = null
     ): User = transaction {
         val id = Users.insertAndGetId {
             it[Users.name]         = name
@@ -43,6 +46,7 @@ class UserRepository {
             it[Users.passwordHash] = passwordHash
             it[Users.role]         = role
             it[Users.phone]        = phone
+            it[Users.cedula]       = cedula
         }
         Users.select { Users.id eq id }.map { rowToUser(it) }.single()
     }

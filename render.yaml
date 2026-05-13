@@ -1,0 +1,47 @@
+# render.yaml — VialReport Backend deployment
+#
+# IMPORTANTE: Render solo ofrece PostgreSQL gratuito.
+# Este proyecto usa MySQL. Opciones para la BD:
+#   A) PlanetScale (MySQL, free tier): https://planetscale.com
+#   B) Railway MySQL: https://railway.app
+#   C) Render PostgreSQL (requiere cambiar el driver y las queries del proyecto)
+#
+# Pasos:
+#   1. Crear base de datos MySQL externa (PlanetScale/Railway)
+#   2. Ir a Render → vialreport-api → Environment y setear las variables marcadas como sync:false
+#   3. Setear ANTHROPIC_API_KEY con tu clave de https://console.anthropic.com
+
+services:
+  - type: web
+    name: vialreport-api
+    runtime: docker
+    dockerfilePath: ./Backend/Dockerfile
+    dockerContext: ./Backend
+    plan: free
+    region: oregon
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: "8080"
+      # MySQL external — completar con los datos de PlanetScale/Railway
+      - key: DB_URL
+        sync: false  # Setear manualmente: jdbc:mysql://host:3306/vialreport?useSSL=true&serverTimezone=UTC
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_DRIVER
+        value: com.mysql.cj.jdbc.Driver
+      # JWT
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ISSUER
+        value: vialreport-api
+      - key: JWT_AUDIENCE
+        value: vialreport-client
+      # Anthropic — setear manualmente con tu API key
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # Directorio de uploads (efímero en Render free tier)
+      - key: UPLOAD_DIR
+        value: /tmp/uploads

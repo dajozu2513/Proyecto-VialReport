@@ -20,8 +20,9 @@ class ReportService(
     private val notificationService: NotificationService
 ) {
 
-    fun getAll(): List<ReportResponse> = transaction {
-        reportRepository.findAll().map { buildResponse(it.id) }
+    fun getFiltered(status: String?, typeId: Int?, zone: String?): List<ReportResponse> = transaction {
+        if (status != null && !ReportStatus.isValid(status)) throw BadRequestException("Estado inválido: $status")
+        reportRepository.findFiltered(status, typeId, zone).map { buildResponse(it.id) }
     }
 
     fun getById(id: Int): ReportResponse = transaction {
@@ -32,11 +33,6 @@ class ReportService(
 
     fun getByCitizen(citizenId: Int): List<ReportResponse> = transaction {
         reportRepository.findByCitizen(citizenId).map { buildResponse(it.id) }
-    }
-
-    fun getByStatus(status: String): List<ReportResponse> = transaction {
-        if (!ReportStatus.isValid(status)) throw BadRequestException("Estado inválido: $status")
-        reportRepository.findByStatus(status).map { buildResponse(it.id) }
     }
 
     fun create(citizenId: Int, request: ReportRequest): ReportResponse = transaction {

@@ -82,6 +82,9 @@ fun Application.module() {
     val statusLogRepository   = ReportStatusLogRepository()
     val notificationRepository = NotificationRepository()
 
+    val anthropicKey = System.getenv("ANTHROPIC_API_KEY") ?: ""
+    val uploadDir    = System.getenv("UPLOAD_DIR") ?: "./uploads"
+
     val notificationService = NotificationService(notificationRepository)
     val authService         = AuthService(userRepository, jwtSecret, jwtIssuer, jwtAudience)
     val reportService       = ReportService(
@@ -93,7 +96,11 @@ fun Application.module() {
         statusLogRepository,
         notificationService
     )
-    val crewService = CrewService(crewRepository)
+    val crewService    = CrewService(crewRepository)
+    val photoAiService = PhotoAiService(anthropicKey)
+    val photoService   = PhotoService(reportRepository, photoRepository, photoAiService, uploadDir)
+    val mapService     = MapService(reportRepository)
+    val adminService   = AdminService(reportRepository)
 
     // ── 7. Rutas ──────────────────────────────────────────────
     install(Routing) {
@@ -101,9 +108,12 @@ fun Application.module() {
             call.respond(mapOf("status" to "VialReport API corriendo ✓"))
         }
 
-        authRoutes(authService)
-        reportRoutes(reportService)
+        authRoutes(authService, userRepository)
+        reportRoutes(reportService, photoService)
         crewRoutes(crewService)
         notificationRoutes(notificationService)
+        incidentTypeRoutes(incidentTypeRepository)
+        mapRoutes(mapService)
+        adminRoutes(adminService)
     }
 }

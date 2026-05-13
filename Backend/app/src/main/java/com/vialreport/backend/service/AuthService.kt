@@ -33,7 +33,8 @@ class AuthService(
             email        = request.email,
             passwordHash = passwordHash,
             role         = request.role,
-            phone        = request.phone
+            phone        = request.phone,
+            cedula       = request.cedula
         )
 
         // Generar token

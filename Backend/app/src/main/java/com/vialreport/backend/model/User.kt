@@ -9,13 +9,14 @@ import java.time.format.DateTimeFormatter
 
 // ── Tabla ──────────────────────────────────────────────────────
 object Users : IntIdTable("users") {
-    val name = varchar("name", 100)
-    val email = varchar("email", 150).uniqueIndex()
+    val name         = varchar("name", 100)
+    val email        = varchar("email", 150).uniqueIndex()
     val passwordHash = varchar("password_hash", 255)
-    val role = varchar("role", 20).default("citizen")
-    val phone = varchar("phone", 20).nullable()
-    val createdAt = datetime("created_at").default(LocalDateTime.now())
-
+    val role         = varchar("role", 20).default("citizen")
+    val phone        = varchar("phone", 20).nullable()
+    val cedula       = varchar("cedula", 20).nullable()
+    val isVerified   = bool("is_verified").default(false)
+    val createdAt    = datetime("created_at").default(LocalDateTime.now())
 }
 // ── Data class ─────────────────────────────────────────────────
 data class User(
@@ -25,15 +26,17 @@ data class User(
     val passwordHash: String,
     val role: String,
     val phone: String?,
+    val cedula: String?,
+    val isVerified: Boolean,
     val createdAt: LocalDateTime
 ) {
-    // Convierte a DTO de respuesta (sin exponer el password)
     fun toResponse() = UserResponse(
-        id        = id,
-        name      = name,
-        email     = email,
-        role      = role,
-        phone     = phone,
-        createdAt = createdAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+        id         = id,
+        name       = name,
+        email      = email,
+        role       = role,
+        phone      = phone,
+        isVerified = isVerified,
+        createdAt  = createdAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
     )
 }

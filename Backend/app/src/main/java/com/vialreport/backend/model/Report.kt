@@ -16,6 +16,7 @@ object Reports : IntIdTable("reports") {
     val latitude    = double("latitude")
     val longitude   = double("longitude")
     val address     = varchar("address", 255)
+    val zone        = varchar("zone", 100).nullable()
     val createdAt   = datetime("created_at").default(LocalDateTime.now())
     val updatedAt   = datetime("updated_at").default(LocalDateTime.now())
 }
@@ -33,6 +34,7 @@ data class Report(
     val latitude: Double,
     val longitude: Double,
     val address: String,
+    val zone: String?,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime
 )

@@ -49,6 +49,14 @@ data class PhotoResponse(
 )
 
 @Serializable
+data class PhotoUploadResponse(
+    val id: Int,
+    val url: String,
+    val uploadedAt: String,
+    val aiApproved: Boolean
+)
+
+@Serializable
 data class StatusLogResponse(
     val id: Int,
     val changedBy: UserResponse,

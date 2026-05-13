@@ -16,11 +16,3 @@ data class CrewResponse(
     val available: Boolean
 )
 
-@Serializable
-data class IncidentTypeResponse(
-    val id: Int,
-    val name: String,
-    val icon: String,
-    val color: String,
-    val defaultPriority: Int
-)

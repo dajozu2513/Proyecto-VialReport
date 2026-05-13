@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew :app:compileKotlin --no-daemon)",
+      "Bash(./gradlew build *)",
+      "PowerShell(gradle *)"
+    ]
+  }
+}
