@@ -77,7 +77,7 @@ fun Application.module() {
     val statusLogRepository    = ReportStatusLogRepository(db)
     val notificationRepository = NotificationRepository(db)
 
-    val anthropicKey = System.getenv("ANTHROPIC_API_KEY") ?: ""
+    val anthropicKey = System.getenv("GEMINI_API_KEY") ?: ""
     val uploadDir    = System.getenv("UPLOAD_DIR") ?: "./uploads"
 
     val notificationService = NotificationService(notificationRepository)

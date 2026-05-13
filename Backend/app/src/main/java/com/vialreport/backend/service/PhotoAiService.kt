@@ -7,7 +7,6 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
@@ -23,48 +22,37 @@ class PhotoAiService(private val apiKey: String) {
         }
     }
 
-    // Returns true if the image appears to be a real road incident
     suspend fun isRoadIncident(imageBytes: ByteArray, mimeType: String): Boolean {
         if (apiKey.isBlank()) {
-            log.warn("ANTHROPIC_API_KEY not set — skipping AI photo filter")
+            log.warn("GEMINI_API_KEY not set — skipping AI photo filter")
             return true
         }
 
         val b64 = Base64.getEncoder().encodeToString(imageBytes)
 
-        val requestBody = AnthropicRequest(
-            model = "claude-haiku-4-5-20251001",
-            maxTokens = 64,
-            messages = listOf(
-                AnthropicMessage(
-                    role = "user",
-                    content = listOf(
-                        ContentBlock.Image(
-                            source = ImageSource(
-                                type = "base64",
-                                mediaType = mimeType,
-                                data = b64
-                            )
-                        ),
-                        ContentBlock.Text(
-                            text = "Does this image show a real road or public infrastructure incident (pothole, damaged sign, flooded road, broken traffic light, cracked sidewalk, fallen debris, etc.)? Reply with exactly one word: YES or NO."
-                        )
+        val requestBody = GeminiRequest(
+            contents = listOf(
+                GeminiContent(
+                    parts = listOf(
+                        GeminiPart(inlineData = InlineData(mimeType = mimeType, data = b64)),
+                        GeminiPart(text = "Does this image show a real road or public infrastructure incident (pothole, damaged sign, flooded road, broken traffic light, cracked sidewalk, fallen debris)? Reply with exactly one word: YES or NO.")
                     )
                 )
             )
         )
 
         return try {
-            val response: AnthropicResponse = client.post("https://api.anthropic.com/v1/messages") {
-                header("x-api-key", apiKey)
-                header("anthropic-version", "2023-06-01")
+            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey"
+            val response: GeminiResponse = client.post(url) {
                 contentType(ContentType.Application.Json)
                 setBody(requestBody)
             }.body()
 
-            val answer = response.content.firstOrNull()?.text?.trim()?.uppercase() ?: "NO"
+            val answer = response.candidates
+                .firstOrNull()?.content?.parts?.firstOrNull()?.text
+                ?.trim()?.uppercase() ?: "NO"
             log.info("AI photo verdict: $answer")
-            answer.startsWith("YES")
+            answer.contains("YES")
         } catch (e: Exception) {
             log.error("AI photo check failed: ${e.message} — allowing upload")
             true
@@ -72,46 +60,28 @@ class PhotoAiService(private val apiKey: String) {
     }
 }
 
-// ── Anthropic API DTOs (internal) ────────────────────────────────
+// ── Gemini API DTOs (internal) ───────────────────────────────────
 
 @Serializable
-private data class AnthropicRequest(
-    val model: String,
-    @SerialName("max_tokens") val maxTokens: Int,
-    val messages: List<AnthropicMessage>
+private data class GeminiRequest(val contents: List<GeminiContent>)
+
+@Serializable
+private data class GeminiContent(val parts: List<GeminiPart>)
+
+@Serializable
+private data class GeminiPart(
+    val text: String? = null,
+    val inlineData: InlineData? = null
 )
 
 @Serializable
-private data class AnthropicMessage(
-    val role: String,
-    val content: List<ContentBlock>
-)
-
-@Serializable
-private sealed class ContentBlock {
-    @Serializable
-    @SerialName("image")
-    data class Image(val source: ImageSource) : ContentBlock()
-
-    @Serializable
-    @SerialName("text")
-    data class Text(val text: String) : ContentBlock()
-}
-
-@Serializable
-private data class ImageSource(
-    val type: String,
-    @SerialName("media_type") val mediaType: String,
+private data class InlineData(
+    val mimeType: String,
     val data: String
 )
 
 @Serializable
-private data class AnthropicResponse(
-    val content: List<ResponseContent> = emptyList()
-)
+private data class GeminiResponse(val candidates: List<GeminiCandidate> = emptyList())
 
 @Serializable
-private data class ResponseContent(
-    val type: String = "",
-    val text: String = ""
-)
+private data class GeminiCandidate(val content: GeminiContent = GeminiContent(emptyList()))
