@@ -1,25 +1,30 @@
 package com.vialreport.backend.repository
 
+import com.mongodb.client.model.Filters
+import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import com.vialreport.backend.model.IncidentType
-import com.vialreport.backend.model.IncidentTypes
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.transaction
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.toList
+import org.bson.Document
+import org.bson.types.ObjectId
 
-class IncidentTypeRepository {
+class IncidentTypeRepository(db: MongoDatabase) {
 
-    private fun rowToType(row: ResultRow) = IncidentType(
-        id              = row[IncidentTypes.id],
-        name            = row[IncidentTypes.name],
-        icon            = row[IncidentTypes.icon],
-        color           = row[IncidentTypes.color],
-        defaultPriority = row[IncidentTypes.defaultPriority]
+    private val col = db.getCollection<Document>("incident_types")
+
+    private fun docToType(doc: Document) = IncidentType(
+        id              = doc.getObjectId("_id"),
+        name            = doc.getString("name"),
+        icon            = doc.getString("icon"),
+        color           = doc.getString("color"),
+        defaultPriority = doc.getInteger("defaultPriority", 2)
     )
 
-    fun findAll(): List<IncidentType> = transaction {
-        IncidentTypes.selectAll().map { rowToType(it) }
-    }
+    suspend fun findAll(): List<IncidentType> =
+        col.find().toList().map { docToType(it) }
 
-    fun findById(id: Int): IncidentType? = transaction {
-        IncidentTypes.select { IncidentTypes.id eq id }.map { rowToType(it) }.singleOrNull()
+    suspend fun findById(id: String): IncidentType? {
+        if (!ObjectId.isValid(id)) return null
+        return col.find(Filters.eq("_id", ObjectId(id))).firstOrNull()?.let { docToType(it) }
     }
 }

@@ -23,7 +23,7 @@ fun Application.configureSecurity() {
                     .build()
             )
             validate { credential ->
-                val userId = credential.payload.getClaim("userId").asInt()
+                val userId = credential.payload.getClaim("userId").asString()
                 val email  = credential.payload.getClaim("email").asString()
                 val role   = credential.payload.getClaim("role").asString()
 

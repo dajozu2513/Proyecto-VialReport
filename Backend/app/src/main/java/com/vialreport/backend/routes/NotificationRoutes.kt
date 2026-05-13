@@ -15,55 +15,40 @@ fun Route.notificationRoutes(notificationService: NotificationService) {
     authenticate {
         route("/notifications") {
 
-            // GET /notifications — notificaciones del usuario autenticado
             get {
                 val principal = call.principal<JWTPrincipal>()!!
-                val userId    = principal.getClaim("userId", Int::class)!!
+                val userId    = principal.getClaim("userId", String::class)!!
                 val notifs    = notificationService.getByUser(userId)
-                call.respond(
-                    HttpStatusCode.OK,
-                    ApiResponse(success = true, message = "OK", data = notifs)
-                )
+                call.respond(HttpStatusCode.OK,
+                    ApiResponse(success = true, message = "OK", data = notifs))
             }
 
-            // GET /notifications/unread
             get("/unread") {
                 val principal = call.principal<JWTPrincipal>()!!
-                val userId    = principal.getClaim("userId", Int::class)!!
+                val userId    = principal.getClaim("userId", String::class)!!
                 val notifs    = notificationService.getUnreadByUser(userId)
-                call.respond(
-                    HttpStatusCode.OK,
-                    ApiResponse(success = true, message = "OK", data = notifs)
-                )
+                call.respond(HttpStatusCode.OK,
+                    ApiResponse(success = true, message = "OK", data = notifs))
             }
 
-            // PATCH /notifications/{id}/read
             patch("/{id}/read") {
                 try {
-                    val id = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("ID inválido")
+                    val id = call.parameters["id"] ?: throw BadRequestException("ID requerido")
                     notificationService.markAsRead(id)
-                    call.respond(
-                        HttpStatusCode.OK,
-                        ApiResponse<Unit>(success = true, message = "Marcada como leída")
-                    )
+                    call.respond(HttpStatusCode.OK,
+                        ApiResponse<Unit>(success = true, message = "Marcada como leída"))
                 } catch (e: BadRequestException) {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "Bad request")
-                    )
+                    call.respond(HttpStatusCode.BadRequest,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "Bad request"))
                 }
             }
 
-            // PATCH /notifications/read-all
             patch("/read-all") {
                 val principal = call.principal<JWTPrincipal>()!!
-                val userId    = principal.getClaim("userId", Int::class)!!
+                val userId    = principal.getClaim("userId", String::class)!!
                 notificationService.markAllAsRead(userId)
-                call.respond(
-                    HttpStatusCode.OK,
-                    ApiResponse<Unit>(success = true, message = "Todas marcadas como leídas")
-                )
+                call.respond(HttpStatusCode.OK,
+                    ApiResponse<Unit>(success = true, message = "Todas marcadas como leídas"))
             }
         }
     }

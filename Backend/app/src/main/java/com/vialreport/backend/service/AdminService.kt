@@ -5,5 +5,5 @@ import com.vialreport.backend.repository.ReportRepository
 
 class AdminService(private val reportRepository: ReportRepository) {
 
-    fun getStats(): AdminStatsResponse = reportRepository.getStats()
+    suspend fun getStats(): AdminStatsResponse = reportRepository.getStats()
 }

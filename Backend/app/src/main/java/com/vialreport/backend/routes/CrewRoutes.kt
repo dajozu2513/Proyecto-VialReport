@@ -17,126 +17,80 @@ fun Route.crewRoutes(crewService: CrewService) {
     authenticate {
         route("/crews") {
 
-            // GET /crews
             get {
                 val crews = crewService.getAll()
-                call.respond(
-                    HttpStatusCode.OK,
-                    ApiResponse(success = true, message = "OK", data = crews)
-                )
+                call.respond(HttpStatusCode.OK,
+                    ApiResponse(success = true, message = "OK", data = crews))
             }
 
-            // GET /crews/available
             get("/available") {
                 val crews = crewService.getAvailable()
-                call.respond(
-                    HttpStatusCode.OK,
-                    ApiResponse(success = true, message = "OK", data = crews)
-                )
+                call.respond(HttpStatusCode.OK,
+                    ApiResponse(success = true, message = "OK", data = crews))
             }
 
-            // GET /crews/{id}
             get("/{id}") {
                 try {
-                    val id   = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("ID inválido")
+                    val id   = call.parameters["id"] ?: throw BadRequestException("ID requerido")
                     val crew = crewService.getById(id)
-                    call.respond(
-                        HttpStatusCode.OK,
-                        ApiResponse(success = true, message = "OK", data = crew)
-                    )
+                    call.respond(HttpStatusCode.OK,
+                        ApiResponse(success = true, message = "OK", data = crew))
                 } catch (e: NotFoundException) {
-                    call.respond(
-                        HttpStatusCode.NotFound,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrada")
-                    )
+                    call.respond(HttpStatusCode.NotFound,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrada"))
                 }
             }
 
-            // POST /crews — solo admin
             post {
                 try {
                     val principal = call.principal<JWTPrincipal>()!!
                     val role      = principal.getClaim("role", String::class)!!
-
-                    if (role != UserRole.ADMIN) {
-                        throw UnauthorizedException("Solo admins pueden crear cuadrillas")
-                    }
-
+                    if (role != UserRole.ADMIN) throw UnauthorizedException("Solo admins pueden crear cuadrillas")
                     val request = call.receive<CrewRequest>()
                     val crew    = crewService.create(request)
-                    call.respond(
-                        HttpStatusCode.Created,
-                        ApiResponse(success = true, message = "Cuadrilla creada", data = crew)
-                    )
+                    call.respond(HttpStatusCode.Created,
+                        ApiResponse(success = true, message = "Cuadrilla creada", data = crew))
                 } catch (e: UnauthorizedException) {
-                    call.respond(
-                        HttpStatusCode.Unauthorized,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado")
-                    )
+                    call.respond(HttpStatusCode.Unauthorized,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado"))
                 }
             }
 
-            // PATCH /crews/{id}/availability — solo admin
             patch("/{id}/availability") {
                 try {
                     val principal = call.principal<JWTPrincipal>()!!
                     val role      = principal.getClaim("role", String::class)!!
-
-                    if (role != UserRole.ADMIN) {
-                        throw UnauthorizedException("Solo admins pueden modificar cuadrillas")
-                    }
-
-                    val id        = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("ID inválido")
+                    if (role != UserRole.ADMIN) throw UnauthorizedException("Solo admins pueden modificar cuadrillas")
+                    val id        = call.parameters["id"] ?: throw BadRequestException("ID requerido")
                     val available = call.receive<Map<String, Boolean>>()["available"]
                         ?: throw BadRequestException("Campo 'available' requerido")
                     val crew      = crewService.setAvailability(id, available)
-
-                    call.respond(
-                        HttpStatusCode.OK,
-                        ApiResponse(success = true, message = "Disponibilidad actualizada", data = crew)
-                    )
+                    call.respond(HttpStatusCode.OK,
+                        ApiResponse(success = true, message = "Disponibilidad actualizada", data = crew))
                 } catch (e: UnauthorizedException) {
-                    call.respond(
-                        HttpStatusCode.Unauthorized,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado")
-                    )
+                    call.respond(HttpStatusCode.Unauthorized,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado"))
                 } catch (e: NotFoundException) {
-                    call.respond(
-                        HttpStatusCode.NotFound,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrada")
-                    )
+                    call.respond(HttpStatusCode.NotFound,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrada"))
                 }
             }
 
-            // DELETE /crews/{id} — solo admin
             delete("/{id}") {
                 try {
                     val principal = call.principal<JWTPrincipal>()!!
                     val role      = principal.getClaim("role", String::class)!!
-
-                    if (role != UserRole.ADMIN) {
-                        throw UnauthorizedException("Solo admins pueden eliminar cuadrillas")
-                    }
-
-                    val id = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("ID inválido")
+                    if (role != UserRole.ADMIN) throw UnauthorizedException("Solo admins pueden eliminar cuadrillas")
+                    val id = call.parameters["id"] ?: throw BadRequestException("ID requerido")
                     crewService.delete(id)
-                    call.respond(
-                        HttpStatusCode.OK,
-                        ApiResponse<Unit>(success = true, message = "Cuadrilla eliminada")
-                    )
+                    call.respond(HttpStatusCode.OK,
+                        ApiResponse<Unit>(success = true, message = "Cuadrilla eliminada"))
                 } catch (e: UnauthorizedException) {
-                    call.respond(
-                        HttpStatusCode.Unauthorized,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado")
-                    )
+                    call.respond(HttpStatusCode.Unauthorized,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado"))
                 } catch (e: NotFoundException) {
-                    call.respond(
-                        HttpStatusCode.NotFound,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrada")
-                    )
+                    call.respond(HttpStatusCode.NotFound,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrada"))
                 }
             }
         }

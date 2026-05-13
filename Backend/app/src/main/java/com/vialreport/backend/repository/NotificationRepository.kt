@@ -1,55 +1,71 @@
 package com.vialreport.backend.repository
 
+import com.mongodb.client.model.Filters
+import com.mongodb.client.model.Sorts
+import com.mongodb.client.model.Updates
+import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import com.vialreport.backend.model.Notification
-import com.vialreport.backend.model.Notifications
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.transactions.transaction
+import kotlinx.coroutines.flow.toList
+import org.bson.Document
+import org.bson.types.ObjectId
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.util.Date
 
-class NotificationRepository {
+class NotificationRepository(db: MongoDatabase) {
 
-    private fun rowToNotification(row: ResultRow) = Notification(
-        id       = row[Notifications.id].value,
-        userId   = row[Notifications.userId],
-        reportId = row[Notifications.reportId],
-        title    = row[Notifications.title],
-        body     = row[Notifications.body],
-        isRead   = row[Notifications.isRead],
-        sentAt   = row[Notifications.sentAt]
+    private val col = db.getCollection<Document>("notifications")
+
+    private fun Date.toLocalDateTime() =
+        toInstant().atOffset(ZoneOffset.UTC).toLocalDateTime()
+
+    private fun LocalDateTime.toDate() =
+        Date.from(atOffset(ZoneOffset.UTC).toInstant())
+
+    private fun docToNotification(doc: Document) = Notification(
+        id       = doc.getObjectId("_id"),
+        userId   = doc.getString("userId"),
+        reportId = doc.getString("reportId"),
+        title    = doc.getString("title"),
+        body     = doc.getString("body"),
+        isRead   = doc.getBoolean("isRead", false),
+        sentAt   = (doc.getDate("sentAt") ?: Date()).toLocalDateTime()
     )
 
-    fun findByUser(userId: Int): List<Notification> = transaction {
-        Notifications.select { Notifications.userId eq userId }
-            .orderBy(Notifications.sentAt, SortOrder.DESC)
-            .map { rowToNotification(it) }
+    suspend fun findByUser(userId: String): List<Notification> =
+        col.find(Filters.eq("userId", userId))
+            .sort(Sorts.descending("sentAt"))
+            .toList().map { docToNotification(it) }
+
+    suspend fun findUnreadByUser(userId: String): List<Notification> =
+        col.find(Filters.and(Filters.eq("userId", userId), Filters.eq("isRead", false)))
+            .sort(Sorts.descending("sentAt"))
+            .toList().map { docToNotification(it) }
+
+    suspend fun create(userId: String, reportId: String, title: String, body: String): Notification {
+        val notif = Notification(userId = userId, reportId = reportId, title = title, body = body)
+        val doc = Document("_id", notif.id)
+            .append("userId", notif.userId)
+            .append("reportId", notif.reportId)
+            .append("title", notif.title)
+            .append("body", notif.body)
+            .append("isRead", notif.isRead)
+            .append("sentAt", notif.sentAt.toDate())
+        col.insertOne(doc)
+        return notif
     }
 
-    fun findUnreadByUser(userId: Int): List<Notification> = transaction {
-        Notifications
-            .select { (Notifications.userId eq userId) and (Notifications.isRead eq false) }
-            .orderBy(Notifications.sentAt, SortOrder.DESC)
-            .map { rowToNotification(it) }
+    suspend fun markAsRead(id: String): Boolean {
+        if (!ObjectId.isValid(id)) return false
+        return col.updateOne(
+            Filters.eq("_id", ObjectId(id)),
+            Updates.set("isRead", true)
+        ).modifiedCount > 0
     }
 
-    fun create(userId: Int, reportId: Int, title: String, body: String): Notification = transaction {
-        val id = Notifications.insertAndGetId {
-            it[Notifications.userId]   = userId
-            it[Notifications.reportId] = reportId
-            it[Notifications.title]    = title
-            it[Notifications.body]     = body
-        }
-        Notifications.select { Notifications.id eq id }.map { rowToNotification(it) }.single()
-    }
-
-    fun markAsRead(id: Int): Boolean = transaction {
-        Notifications.update({ Notifications.id eq id }) {
-            it[Notifications.isRead] = true
-        } > 0
-    }
-
-    fun markAllAsRead(userId: Int): Boolean = transaction {
-        Notifications.update({ Notifications.userId eq userId }) {
-            it[Notifications.isRead] = true
-        } > 0
-    }
+    suspend fun markAllAsRead(userId: String): Boolean =
+        col.updateMany(
+            Filters.and(Filters.eq("userId", userId), Filters.eq("isRead", false)),
+            Updates.set("isRead", true)
+        ).modifiedCount > 0
 }

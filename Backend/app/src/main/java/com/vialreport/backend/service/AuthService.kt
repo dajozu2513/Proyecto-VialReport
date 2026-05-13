@@ -18,16 +18,11 @@ class AuthService(
     private val jwtAudience: String
 ) {
 
-    fun register(request: RegisterRequest): AuthResponse {
-        // Verificar si el email ya existe
+    suspend fun register(request: RegisterRequest): AuthResponse {
         if (userRepository.existsByEmail(request.email)) {
             throw ConflictException("El email ya está registrado")
         }
-
-        // Hashear el password
         val passwordHash = BCrypt.hashpw(request.password, BCrypt.gensalt())
-
-        // Crear usuario
         val user = userRepository.create(
             name         = request.name,
             email        = request.email,
@@ -36,43 +31,27 @@ class AuthService(
             phone        = request.phone,
             cedula       = request.cedula
         )
-
-        // Generar token
-        val token = generateToken(user.id, user.email, user.role)
-
-        return AuthResponse(
-            token = token,
-            user  = user.toResponse()
-        )
+        return AuthResponse(token = generateToken(user.id.toHexString(), user.email, user.role),
+                            user  = user.toResponse())
     }
 
-    fun login(request: LoginRequest): AuthResponse {
-        // Buscar usuario por email
+    suspend fun login(request: LoginRequest): AuthResponse {
         val user = userRepository.findByEmail(request.email)
             ?: throw UnauthorizedException("Email o contraseña incorrectos")
-
-        // Verificar password
         if (!BCrypt.checkpw(request.password, user.passwordHash)) {
             throw UnauthorizedException("Email o contraseña incorrectos")
         }
-
-        // Generar token
-        val token = generateToken(user.id, user.email, user.role)
-
-        return AuthResponse(
-            token = token,
-            user  = user.toResponse()
-        )
+        return AuthResponse(token = generateToken(user.id.toHexString(), user.email, user.role),
+                            user  = user.toResponse())
     }
 
-    private fun generateToken(userId: Int, email: String, role: String): String {
-        return JWT.create()
+    private fun generateToken(userId: String, email: String, role: String): String =
+        JWT.create()
             .withIssuer(jwtIssuer)
             .withAudience(jwtAudience)
             .withClaim("userId", userId)
             .withClaim("email", email)
             .withClaim("role", role)
-            .withExpiresAt(Date(System.currentTimeMillis() + 86_400_000)) // 24h
+            .withExpiresAt(Date(System.currentTimeMillis() + 86_400_000))
             .sign(Algorithm.HMAC256(jwtSecret))
-    }
 }

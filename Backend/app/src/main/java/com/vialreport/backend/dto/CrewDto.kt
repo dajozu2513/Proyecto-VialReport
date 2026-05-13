@@ -10,7 +10,7 @@ data class CrewRequest(
 
 @Serializable
 data class CrewResponse(
-    val id: Int,
+    val id: String,
     val name: String,
     val zone: String,
     val available: Boolean

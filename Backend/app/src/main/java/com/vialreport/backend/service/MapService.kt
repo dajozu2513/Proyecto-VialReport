@@ -6,9 +6,9 @@ import com.vialreport.backend.repository.ReportRepository
 
 class MapService(private val reportRepository: ReportRepository) {
 
-    fun getHeatmap(typeId: Int?, zone: String?, status: String?): List<HeatmapPoint> =
+    suspend fun getHeatmap(typeId: String?, zone: String?, status: String?): List<HeatmapPoint> =
         reportRepository.getHeatmapData(typeId, zone, status)
 
-    fun getMapPoints(typeId: Int?, zone: String?): List<MapReportPoint> =
+    suspend fun getMapPoints(typeId: String?, zone: String?): List<MapReportPoint> =
         reportRepository.getMapPoints(typeId, zone)
 }

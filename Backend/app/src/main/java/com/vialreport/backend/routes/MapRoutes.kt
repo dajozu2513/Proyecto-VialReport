@@ -11,27 +11,21 @@ fun Route.mapRoutes(mapService: MapService) {
 
     route("/map") {
 
-        // GET /map/heatmap — público
         get("/heatmap") {
-            val typeId = call.request.queryParameters["typeId"]?.toIntOrNull()
+            val typeId = call.request.queryParameters["typeId"]
             val zone   = call.request.queryParameters["zone"]
             val status = call.request.queryParameters["status"]
             val points = mapService.getHeatmap(typeId, zone, status)
-            call.respond(
-                HttpStatusCode.OK,
-                ApiResponse(success = true, message = "OK", data = points)
-            )
+            call.respond(HttpStatusCode.OK,
+                ApiResponse(success = true, message = "OK", data = points))
         }
 
-        // GET /map/reports — público, versión simplificada para mapa
         get("/reports") {
-            val typeId = call.request.queryParameters["typeId"]?.toIntOrNull()
+            val typeId = call.request.queryParameters["typeId"]
             val zone   = call.request.queryParameters["zone"]
             val points = mapService.getMapPoints(typeId, zone)
-            call.respond(
-                HttpStatusCode.OK,
-                ApiResponse(success = true, message = "OK", data = points)
-            )
+            call.respond(HttpStatusCode.OK,
+                ApiResponse(success = true, message = "OK", data = points))
         }
     }
 }

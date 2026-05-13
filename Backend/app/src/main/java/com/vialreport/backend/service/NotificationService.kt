@@ -2,32 +2,26 @@ package com.vialreport.backend.service
 
 import com.vialreport.backend.dto.NotificationResponse
 import com.vialreport.backend.repository.NotificationRepository
-import org.jetbrains.exposed.sql.transactions.transaction
 
 class NotificationService(
     private val notificationRepository: NotificationRepository
 ) {
 
-    fun getByUser(userId: Int): List<NotificationResponse> = transaction {
+    suspend fun getByUser(userId: String): List<NotificationResponse> =
         notificationRepository.findByUser(userId).map { it.toResponse() }
-    }
 
-    fun getUnreadByUser(userId: Int): List<NotificationResponse> = transaction {
+    suspend fun getUnreadByUser(userId: String): List<NotificationResponse> =
         notificationRepository.findUnreadByUser(userId).map { it.toResponse() }
-    }
 
-    fun markAsRead(notificationId: Int): Boolean = transaction {
+    suspend fun markAsRead(notificationId: String): Boolean =
         notificationRepository.markAsRead(notificationId)
-    }
 
-    fun markAllAsRead(userId: Int): Boolean = transaction {
+    suspend fun markAllAsRead(userId: String): Boolean =
         notificationRepository.markAllAsRead(userId)
-    }
 
-    // Llamado internamente cuando cambia el estado de un reporte
-    fun notifyStatusChange(
-        userId: Int,
-        reportId: Int,
+    suspend fun notifyStatusChange(
+        userId: String,
+        reportId: String,
         oldStatus: String,
         newStatus: String
     ) {
@@ -40,9 +34,7 @@ class NotificationService(
             "rejected"    to "Rechazado",
             "duplicate"   to "Duplicado"
         )
-
         val label = statusLabels[newStatus] ?: newStatus
-
         notificationRepository.create(
             userId   = userId,
             reportId = reportId,

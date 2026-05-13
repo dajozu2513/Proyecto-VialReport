@@ -2,13 +2,15 @@ package com.vialreport.backend.service
 
 import com.vialreport.backend.dto.ReportRequest
 import com.vialreport.backend.dto.ReportResponse
+import com.vialreport.backend.dto.StatusLogResponse
 import com.vialreport.backend.dto.UpdateStatusRequest
 import com.vialreport.backend.repository.*
 import com.vialreport.backend.util.BadRequestException
 import com.vialreport.backend.util.NotFoundException
 import com.vialreport.backend.util.ReportStatus
+import com.vialreport.backend.util.UnauthorizedException
 import com.vialreport.backend.util.UserRole
-import org.jetbrains.exposed.sql.transactions.transaction
+import java.time.format.DateTimeFormatter
 
 class ReportService(
     private val reportRepository: ReportRepository,
@@ -20,23 +22,20 @@ class ReportService(
     private val notificationService: NotificationService
 ) {
 
-    fun getFiltered(status: String?, typeId: Int?, zone: String?): List<ReportResponse> = transaction {
+    suspend fun getFiltered(status: String?, typeId: String?, zone: String?): List<ReportResponse> {
         if (status != null && !ReportStatus.isValid(status)) throw BadRequestException("Estado inválido: $status")
-        reportRepository.findFiltered(status, typeId, zone).map { buildResponse(it.id) }
+        return reportRepository.findFiltered(status, typeId, zone).map { buildResponse(it.id.toHexString()) }
     }
 
-    fun getById(id: Int): ReportResponse = transaction {
-        reportRepository.findById(id)
-            ?: throw NotFoundException("Reporte #$id no encontrado")
-        buildResponse(id)
+    suspend fun getById(id: String): ReportResponse {
+        reportRepository.findById(id) ?: throw NotFoundException("Reporte $id no encontrado")
+        return buildResponse(id)
     }
 
-    fun getByCitizen(citizenId: Int): List<ReportResponse> = transaction {
-        reportRepository.findByCitizen(citizenId).map { buildResponse(it.id) }
-    }
+    suspend fun getByCitizen(citizenId: String): List<ReportResponse> =
+        reportRepository.findByCitizen(citizenId).map { buildResponse(it.id.toHexString()) }
 
-    fun create(citizenId: Int, request: ReportRequest): ReportResponse = transaction {
-        // Validar que el tipo de incidente existe
+    suspend fun create(citizenId: String, request: ReportRequest): ReportResponse {
         incidentTypeRepository.findById(request.typeId)
             ?: throw NotFoundException("Tipo de incidente no encontrado")
 
@@ -50,25 +49,20 @@ class ReportService(
             longitude   = request.longitude,
             address     = request.address
         )
-
-        buildResponse(report.id)
+        return buildResponse(report.id.toHexString())
     }
 
-    fun updateStatus(
-        reportId: Int,
-        adminId: Int,
+    suspend fun updateStatus(
+        reportId: String,
+        adminId: String,
         request: UpdateStatusRequest
-    ): ReportResponse = transaction {
-        // Validar estado
+    ): ReportResponse {
         if (!ReportStatus.isValid(request.status)) {
             throw BadRequestException("Estado inválido: ${request.status}")
         }
-
-        // Obtener reporte actual
         val report = reportRepository.findById(reportId)
-            ?: throw NotFoundException("Reporte #$reportId no encontrado")
+            ?: throw NotFoundException("Reporte $reportId no encontrado")
 
-        // Guardar en el historial
         statusLogRepository.create(
             reportId  = reportId,
             changedBy = adminId,
@@ -76,44 +70,36 @@ class ReportService(
             newStatus = request.status,
             note      = request.note
         )
-
-        // Actualizar el reporte
         reportRepository.updateStatus(reportId, request.status, request.crewId)
-
-        // Notificar al ciudadano
         notificationService.notifyStatusChange(
             userId    = report.citizenId,
             reportId  = reportId,
             oldStatus = report.status,
             newStatus = request.status
         )
-
-        buildResponse(reportId)
+        return buildResponse(reportId)
     }
 
-    fun delete(reportId: Int, requesterId: Int, requesterRole: String): Boolean = transaction {
+    suspend fun delete(reportId: String, requesterId: String, requesterRole: String): Boolean {
         val report = reportRepository.findById(reportId)
-            ?: throw NotFoundException("Reporte #$reportId no encontrado")
-
-        // Solo el dueño o un admin pueden eliminar
+            ?: throw NotFoundException("Reporte $reportId no encontrado")
         if (requesterRole != UserRole.ADMIN && report.citizenId != requesterId) {
-            throw com.vialreport.backend.util.UnauthorizedException("No tenés permiso para eliminar este reporte")
+            throw UnauthorizedException("No tenés permiso para eliminar este reporte")
         }
-
-        reportRepository.delete(reportId)
+        return reportRepository.delete(reportId)
     }
 
-    // Construye el ReportResponse completo con todos los datos relacionados
-    private fun buildResponse(reportId: Int): ReportResponse {
-        val report   = reportRepository.findById(reportId)!!
-        val citizen  = userRepository.findById(report.citizenId)!!
-        val type     = incidentTypeRepository.findById(report.typeId)!!
-        val crew     = report.crewId?.let { crewRepository.findById(it) }
-        val photos   = photoRepository.findByReport(reportId)
-        val logs     = statusLogRepository.findByReport(reportId)
+    private suspend fun buildResponse(reportId: String): ReportResponse {
+        val report  = reportRepository.findById(reportId)!!
+        val citizen = userRepository.findById(report.citizenId)!!
+        val type    = incidentTypeRepository.findById(report.typeId)!!
+        val crew    = report.crewId?.let { crewRepository.findById(it) }
+        val photos  = photoRepository.findByReport(reportId)
+        val logs    = statusLogRepository.findByReport(reportId)
+        val fmt     = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
         return ReportResponse(
-            id          = report.id,
+            id          = report.id.toHexString(),
             citizen     = citizen.toResponse(),
             type        = type.toResponse(),
             crew        = crew?.toResponse(),
@@ -126,18 +112,16 @@ class ReportService(
             address     = report.address,
             photos      = photos.map { it.toResponse() },
             statusLog   = logs.map { log ->
-                val changedBy = userRepository.findById(log.changedBy)!!
-                com.vialreport.backend.dto.StatusLogResponse(
-                    id        = log.id,
-                    changedBy = changedBy.toResponse(),
+                StatusLogResponse(
+                    id        = log.id.toHexString(),
                     oldStatus = log.oldStatus,
                     newStatus = log.newStatus,
                     note      = log.note,
-                    changedAt = log.changedAt.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                    changedAt = log.changedAt.format(fmt)
                 )
             },
-            createdAt   = report.createdAt.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-            updatedAt   = report.updatedAt.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+            createdAt   = report.createdAt.format(fmt),
+            updatedAt   = report.updatedAt.format(fmt)
         )
     }
 }

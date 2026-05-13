@@ -22,6 +22,7 @@ fun Application.module() {
 
     // ── 1. Base de datos ──────────────────────────────────────
     DatabaseFactory.init(environment)
+    val db = DatabaseFactory.db
 
     // ── 2. JSON ───────────────────────────────────────────────
     install(ContentNegotiation) {
@@ -53,16 +54,10 @@ fun Application.module() {
             )
         }
         status(HttpStatusCode.Unauthorized) { call, _ ->
-            call.respond(
-                HttpStatusCode.Unauthorized,
-                mapOf("error" to "No autorizado")
-            )
+            call.respond(HttpStatusCode.Unauthorized, mapOf("error" to "No autorizado"))
         }
         status(HttpStatusCode.NotFound) { call, _ ->
-            call.respond(
-                HttpStatusCode.NotFound,
-                mapOf("error" to "Recurso no encontrado")
-            )
+            call.respond(HttpStatusCode.NotFound, mapOf("error" to "Recurso no encontrado"))
         }
     }
 
@@ -74,13 +69,13 @@ fun Application.module() {
     val jwtIssuer   = environment.config.property("jwt.issuer").getString()
     val jwtAudience = environment.config.property("jwt.audience").getString()
 
-    val userRepository        = UserRepository()
-    val reportRepository      = ReportRepository()
-    val incidentTypeRepository = IncidentTypeRepository()
-    val crewRepository        = CrewRepository()
-    val photoRepository       = ReportPhotoRepository()
-    val statusLogRepository   = ReportStatusLogRepository()
-    val notificationRepository = NotificationRepository()
+    val userRepository         = UserRepository(db)
+    val reportRepository       = ReportRepository(db)
+    val incidentTypeRepository = IncidentTypeRepository(db)
+    val crewRepository         = CrewRepository(db)
+    val photoRepository        = ReportPhotoRepository(db)
+    val statusLogRepository    = ReportStatusLogRepository(db)
+    val notificationRepository = NotificationRepository(db)
 
     val anthropicKey = System.getenv("ANTHROPIC_API_KEY") ?: ""
     val uploadDir    = System.getenv("UPLOAD_DIR") ?: "./uploads"

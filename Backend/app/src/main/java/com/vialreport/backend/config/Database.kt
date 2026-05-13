@@ -1,57 +1,27 @@
 package com.vialreport.backend.config
 
-import com.vialreport.backend.model.*
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
+import com.mongodb.kotlin.client.coroutine.MongoClient
+import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import io.ktor.server.application.*
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.selectAll
-import org.jetbrains.exposed.sql.transactions.transaction
+import kotlinx.coroutines.runBlocking
+import org.bson.Document
 
 object DatabaseFactory {
 
+    lateinit var db: MongoDatabase
+        private set
+
     fun init(environment: ApplicationEnvironment) {
-        val config = environment.config
-        val url = config.property("database.url").getString()
-        val user = config.property("database.user").getString()
-        val password = config.property("database.password").getString()
-        val driver = config.property("database.driver").getString()
+        val uri = environment.config.property("mongodb.uri").getString()
+        val client = MongoClient.create(uri)
+        db = client.getDatabase("vialreport")
 
-        // ── HikariCP — pool de conexiones ─────────────────────
-        val hikariConfig = HikariConfig().apply {
-            jdbcUrl = url
-            username = user
-            this.password = password
-            driverClassName = driver
-            maximumPoolSize = 10
-            minimumIdle = 2
-            idleTimeout = 600_000
-            connectionTimeout = 30_000
-        }
-
-        Database.connect(HikariDataSource(hikariConfig))
-
-        // ── Crear tablas si no existen ────────────────────────
-        transaction {
-            SchemaUtils.create(
-                Users,
-                IncidentTypes,
-                Crews,
-                Reports,
-                ReportPhotos,
-                ReportStatusLogs,
-                Notifications
-            )
-
-            // Insertar tipos de incidente por defecto si la tabla está vacía
-            seedIncidentTypes()
-        }
+        runBlocking { seedIncidentTypes() }
     }
 
-    private fun seedIncidentTypes() {
-        if (IncidentTypes.selectAll().count() > 0L) return
+    private suspend fun seedIncidentTypes() {
+        val collection = db.getCollection<Document>("incident_types")
+        if (collection.countDocuments() > 0L) return
 
         val types = listOf(
             Triple("Bache", "🕳️", "#ef4444"),
@@ -64,13 +34,12 @@ object DatabaseFactory {
             Triple("Basura acumulada", "🗑️", "#22c55e")
         )
 
-        types.forEach { (name, icon, color) ->
-            IncidentTypes.insert {
-                it[IncidentTypes.name] = name
-                it[IncidentTypes.icon] = icon
-                it[IncidentTypes.color] = color
-                it[IncidentTypes.defaultPriority] = 2
-            }
+        val docs = types.map { (name, icon, color) ->
+            Document("name", name)
+                .append("icon", icon)
+                .append("color", color)
+                .append("defaultPriority", 2)
         }
+        collection.insertMany(docs)
     }
 }

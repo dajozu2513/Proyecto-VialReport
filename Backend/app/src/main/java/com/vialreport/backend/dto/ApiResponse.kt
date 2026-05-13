@@ -35,7 +35,7 @@ data class AuthResponse(
 // Respuesta de usuario (sin password ni cedula)
 @Serializable
 data class UserResponse(
-    val id: Int,
+    val id: String,
     val name: String,
     val email: String,
     val role: String,

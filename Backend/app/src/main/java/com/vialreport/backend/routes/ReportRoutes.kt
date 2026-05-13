@@ -18,79 +18,61 @@ fun Route.reportRoutes(reportService: ReportService, photoService: PhotoService)
 
     route("/reports") {
 
-        // GET /reports — admin ve todos, ciudadano ve los suyos
         authenticate {
+            // GET /reports
             get {
                 try {
                     val principal = call.principal<JWTPrincipal>()!!
                     val role      = principal.getClaim("role", String::class)!!
-                    val userId    = principal.getClaim("userId", Int::class)!!
+                    val userId    = principal.getClaim("userId", String::class)!!
 
                     val reports = if (role == UserRole.ADMIN) {
                         val status = call.request.queryParameters["status"]
-                        val typeId = call.request.queryParameters["typeId"]?.toIntOrNull()
+                        val typeId = call.request.queryParameters["typeId"]
                         val zone   = call.request.queryParameters["zone"]
                         reportService.getFiltered(status, typeId, zone)
                     } else {
                         reportService.getByCitizen(userId)
                     }
-
-                    call.respond(
-                        HttpStatusCode.OK,
-                        ApiResponse(success = true, message = "OK", data = reports)
-                    )
+                    call.respond(HttpStatusCode.OK,
+                        ApiResponse(success = true, message = "OK", data = reports))
                 } catch (e: BadRequestException) {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "Bad request")
-                    )
+                    call.respond(HttpStatusCode.BadRequest,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "Bad request"))
                 }
             }
 
             // GET /reports/{id}
             get("/{id}") {
                 try {
-                    val id     = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("ID inválido")
+                    val id     = call.parameters["id"] ?: throw BadRequestException("ID requerido")
                     val report = reportService.getById(id)
-                    call.respond(
-                        HttpStatusCode.OK,
-                        ApiResponse(success = true, message = "OK", data = report)
-                    )
+                    call.respond(HttpStatusCode.OK,
+                        ApiResponse(success = true, message = "OK", data = report))
                 } catch (e: NotFoundException) {
-                    call.respond(
-                        HttpStatusCode.NotFound,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado")
-                    )
+                    call.respond(HttpStatusCode.NotFound,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado"))
                 } catch (e: BadRequestException) {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "Bad request")
-                    )
+                    call.respond(HttpStatusCode.BadRequest,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "Bad request"))
                 }
             }
 
-            // POST /reports — ciudadano crea un reporte
+            // POST /reports
             post {
                 try {
                     val principal = call.principal<JWTPrincipal>()!!
-                    val userId    = principal.getClaim("userId", Int::class)!!
+                    val userId    = principal.getClaim("userId", String::class)!!
                     val request   = call.receive<ReportRequest>()
                     val report    = reportService.create(userId, request)
-                    call.respond(
-                        HttpStatusCode.Created,
-                        ApiResponse(success = true, message = "Reporte creado", data = report)
-                    )
+                    call.respond(HttpStatusCode.Created,
+                        ApiResponse(success = true, message = "Reporte creado", data = report))
                 } catch (e: NotFoundException) {
-                    call.respond(
-                        HttpStatusCode.NotFound,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado")
-                    )
+                    call.respond(HttpStatusCode.NotFound,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado"))
                 } catch (e: Exception) {
-                    call.respond(
-                        HttpStatusCode.InternalServerError,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "Error interno")
-                    )
+                    call.respond(HttpStatusCode.InternalServerError,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "Error interno"))
                 }
             }
 
@@ -99,36 +81,24 @@ fun Route.reportRoutes(reportService: ReportService, photoService: PhotoService)
                 try {
                     val principal = call.principal<JWTPrincipal>()!!
                     val role      = principal.getClaim("role", String::class)!!
-                    val adminId   = principal.getClaim("userId", Int::class)!!
+                    val adminId   = principal.getClaim("userId", String::class)!!
 
-                    if (role != UserRole.ADMIN) {
-                        throw UnauthorizedException("Solo admins pueden cambiar el estado")
-                    }
+                    if (role != UserRole.ADMIN) throw UnauthorizedException("Solo admins pueden cambiar el estado")
 
-                    val id      = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("ID inválido")
+                    val id      = call.parameters["id"] ?: throw BadRequestException("ID requerido")
                     val request = call.receive<UpdateStatusRequest>()
                     val report  = reportService.updateStatus(id, adminId, request)
-
-                    call.respond(
-                        HttpStatusCode.OK,
-                        ApiResponse(success = true, message = "Estado actualizado", data = report)
-                    )
+                    call.respond(HttpStatusCode.OK,
+                        ApiResponse(success = true, message = "Estado actualizado", data = report))
                 } catch (e: UnauthorizedException) {
-                    call.respond(
-                        HttpStatusCode.Unauthorized,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado")
-                    )
+                    call.respond(HttpStatusCode.Unauthorized,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado"))
                 } catch (e: NotFoundException) {
-                    call.respond(
-                        HttpStatusCode.NotFound,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado")
-                    )
+                    call.respond(HttpStatusCode.NotFound,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado"))
                 } catch (e: BadRequestException) {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "Bad request")
-                    )
+                    call.respond(HttpStatusCode.BadRequest,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "Bad request"))
                 }
             }
 
@@ -136,89 +106,64 @@ fun Route.reportRoutes(reportService: ReportService, photoService: PhotoService)
             delete("/{id}") {
                 try {
                     val principal = call.principal<JWTPrincipal>()!!
-                    val userId    = principal.getClaim("userId", Int::class)!!
+                    val userId    = principal.getClaim("userId", String::class)!!
                     val role      = principal.getClaim("role", String::class)!!
-                    val id        = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("ID inválido")
+                    val id        = call.parameters["id"] ?: throw BadRequestException("ID requerido")
 
                     reportService.delete(id, userId, role)
-                    call.respond(
-                        HttpStatusCode.OK,
-                        ApiResponse<Unit>(success = true, message = "Reporte eliminado")
-                    )
+                    call.respond(HttpStatusCode.OK,
+                        ApiResponse<Unit>(success = true, message = "Reporte eliminado"))
                 } catch (e: UnauthorizedException) {
-                    call.respond(
-                        HttpStatusCode.Unauthorized,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado")
-                    )
+                    call.respond(HttpStatusCode.Unauthorized,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado"))
                 } catch (e: NotFoundException) {
-                    call.respond(
-                        HttpStatusCode.NotFound,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado")
-                    )
+                    call.respond(HttpStatusCode.NotFound,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado"))
                 }
             }
 
-            // POST /reports/{id}/photos — ciudadano dueño o admin
+            // POST /reports/{id}/photos
             post("/{id}/photos") {
                 try {
                     val principal = call.principal<JWTPrincipal>()!!
-                    val userId    = principal.getClaim("userId", Int::class)!!
+                    val userId    = principal.getClaim("userId", String::class)!!
                     val role      = principal.getClaim("role", String::class)!!
-                    val reportId  = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("ID inválido")
+                    val reportId  = call.parameters["id"] ?: throw BadRequestException("ID requerido")
                     val multipart = call.receiveMultipart()
                     val photo     = photoService.uploadPhoto(reportId, userId, role, multipart)
-                    call.respond(
-                        HttpStatusCode.Created,
-                        ApiResponse(success = true, message = "Foto subida", data = photo)
-                    )
+                    call.respond(HttpStatusCode.Created,
+                        ApiResponse(success = true, message = "Foto subida", data = photo))
                 } catch (e: BadRequestException) {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "Bad request")
-                    )
+                    call.respond(HttpStatusCode.BadRequest,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "Bad request"))
                 } catch (e: NotFoundException) {
-                    call.respond(
-                        HttpStatusCode.NotFound,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado")
-                    )
+                    call.respond(HttpStatusCode.NotFound,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado"))
                 } catch (e: UnauthorizedException) {
-                    call.respond(
-                        HttpStatusCode.Unauthorized,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado")
-                    )
+                    call.respond(HttpStatusCode.Unauthorized,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado"))
                 }
             }
 
-            // GET /reports/{id}/photos — solo admin
+            // GET /reports/{id}/photos
             get("/{id}/photos") {
                 try {
                     val principal = call.principal<JWTPrincipal>()!!
                     val role      = principal.getClaim("role", String::class)!!
                     if (role != UserRole.ADMIN) throw UnauthorizedException("Solo admins pueden ver las fotos")
-                    val reportId = call.parameters["id"]?.toIntOrNull()
-                        ?: throw BadRequestException("ID inválido")
+                    val reportId = call.parameters["id"] ?: throw BadRequestException("ID requerido")
                     val photos   = photoService.getPhotos(reportId)
-                    call.respond(
-                        HttpStatusCode.OK,
-                        ApiResponse(success = true, message = "OK", data = photos)
-                    )
+                    call.respond(HttpStatusCode.OK,
+                        ApiResponse(success = true, message = "OK", data = photos))
                 } catch (e: UnauthorizedException) {
-                    call.respond(
-                        HttpStatusCode.Unauthorized,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado")
-                    )
+                    call.respond(HttpStatusCode.Unauthorized,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado"))
                 } catch (e: NotFoundException) {
-                    call.respond(
-                        HttpStatusCode.NotFound,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado")
-                    )
+                    call.respond(HttpStatusCode.NotFound,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado"))
                 } catch (e: BadRequestException) {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        ApiResponse<Unit>(success = false, message = e.message ?: "Bad request")
-                    )
+                    call.respond(HttpStatusCode.BadRequest,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "Bad request"))
                 }
             }
         }

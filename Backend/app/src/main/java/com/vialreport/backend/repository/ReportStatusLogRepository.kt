@@ -1,42 +1,63 @@
 package com.vialreport.backend.repository
 
+import com.mongodb.client.model.Filters
+import com.mongodb.client.model.Sorts
+import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import com.vialreport.backend.model.ReportStatusLog
-import com.vialreport.backend.model.ReportStatusLogs
-import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.transaction
+import kotlinx.coroutines.flow.toList
+import org.bson.Document
+import org.bson.types.ObjectId
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.util.Date
 
-class ReportStatusLogRepository {
+class ReportStatusLogRepository(db: MongoDatabase) {
 
-    private fun rowToLog(row: ResultRow) = ReportStatusLog(
-        id        = row[ReportStatusLogs.id].value,
-        reportId  = row[ReportStatusLogs.reportId],
-        changedBy = row[ReportStatusLogs.changedBy],
-        oldStatus = row[ReportStatusLogs.oldStatus],
-        newStatus = row[ReportStatusLogs.newStatus],
-        note      = row[ReportStatusLogs.note],
-        changedAt = row[ReportStatusLogs.changedAt]
+    private val col = db.getCollection<Document>("report_status_logs")
+
+    private fun Date.toLocalDateTime() =
+        toInstant().atOffset(ZoneOffset.UTC).toLocalDateTime()
+
+    private fun LocalDateTime.toDate() =
+        Date.from(atOffset(ZoneOffset.UTC).toInstant())
+
+    private fun docToLog(doc: Document) = ReportStatusLog(
+        id        = doc.getObjectId("_id"),
+        reportId  = doc.getString("reportId"),
+        changedBy = doc.getString("changedBy"),
+        oldStatus = doc.getString("oldStatus"),
+        newStatus = doc.getString("newStatus"),
+        note      = doc.getString("note"),
+        changedAt = (doc.getDate("changedAt") ?: Date()).toLocalDateTime()
     )
 
-    fun findByReport(reportId: Int): List<ReportStatusLog> = transaction {
-        ReportStatusLogs.select { ReportStatusLogs.reportId eq reportId }
-            .orderBy(ReportStatusLogs.changedAt, SortOrder.DESC)
-            .map { rowToLog(it) }
-    }
+    suspend fun findByReport(reportId: String): List<ReportStatusLog> =
+        col.find(Filters.eq("reportId", reportId))
+            .sort(Sorts.descending("changedAt"))
+            .toList().map { docToLog(it) }
 
-    fun create(
-        reportId: Int,
-        changedBy: Int,
+    suspend fun create(
+        reportId: String,
+        changedBy: String,
         oldStatus: String,
         newStatus: String,
         note: String?
-    ): ReportStatusLog = transaction {
-        val id = ReportStatusLogs.insertAndGetId {
-            it[ReportStatusLogs.reportId]  = reportId
-            it[ReportStatusLogs.changedBy] = changedBy
-            it[ReportStatusLogs.oldStatus] = oldStatus
-            it[ReportStatusLogs.newStatus] = newStatus
-            it[ReportStatusLogs.note]      = note
-        }
-        ReportStatusLogs.select { ReportStatusLogs.id eq id }.map { rowToLog(it) }.single()
+    ): ReportStatusLog {
+        val log = ReportStatusLog(
+            reportId  = reportId,
+            changedBy = changedBy,
+            oldStatus = oldStatus,
+            newStatus = newStatus,
+            note      = note
+        )
+        val doc = Document("_id", log.id)
+            .append("reportId", log.reportId)
+            .append("changedBy", log.changedBy)
+            .append("oldStatus", log.oldStatus)
+            .append("newStatus", log.newStatus)
+            .append("note", log.note)
+            .append("changedAt", log.changedAt.toDate())
+        col.insertOne(doc)
+        return log
     }
 }

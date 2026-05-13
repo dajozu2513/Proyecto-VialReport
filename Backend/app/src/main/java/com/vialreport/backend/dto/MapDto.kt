@@ -8,12 +8,12 @@ data class HeatmapPoint(
     val longitude: Double,
     val weight:    Int,
     val status:    String,
-    val typeId:    Int
+    val typeId:    String
 )
 
 @Serializable
 data class MapReportPoint(
-    val id:        Int,
+    val id:        String,
     val latitude:  Double,
     val longitude: Double,
     val status:    String,
