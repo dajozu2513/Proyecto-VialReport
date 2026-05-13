@@ -7,9 +7,9 @@
   "variable": [
     { "key": "baseUrl",  "value": "http://localhost:8080", "type": "string" },
     { "key": "token",    "value": "",                      "type": "string" },
-    { "key": "reportId", "value": "1",                     "type": "string" },
-    { "key": "crewId",   "value": "1",                     "type": "string" },
-    { "key": "notifId",  "value": "1",                     "type": "string" }
+    { "key": "reportId", "value": "507f1f77bcf86cd799439011", "type": "string" },
+    { "key": "crewId",   "value": "507f1f77bcf86cd799439011", "type": "string" },
+    { "key": "notifId",  "value": "507f1f77bcf86cd799439011", "type": "string" }
   ],
   "item": [
 
@@ -127,13 +127,13 @@
           "request": {
             "method": "GET",
             "url": {
-              "raw": "{{baseUrl}}/reports?status=new&typeId=1&zone=Centro",
+              "raw": "{{baseUrl}}/reports?status=new&typeId=507f1f77bcf86cd799439011&zone=Centro",
               "host": ["{{baseUrl}}"],
               "path": ["reports"],
               "query": [
-                { "key": "status", "value": "new",    "description": "new | verified | in_progress | repairing | resolved | rejected | duplicate" },
-                { "key": "typeId", "value": "1",      "description": "ID del tipo de incidente" },
-                { "key": "zone",   "value": "Centro", "description": "Filtra por substring en el campo address" }
+                { "key": "status", "value": "new",                        "description": "new | verified | in_progress | repairing | resolved | rejected | duplicate" },
+                { "key": "typeId", "value": "507f1f77bcf86cd799439011",   "description": "ObjectId del tipo de incidente" },
+                { "key": "zone",   "value": "Centro",                     "description": "Filtra por substring en el campo address" }
               ]
             },
             "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
@@ -199,7 +199,7 @@
             "body": {
               "mode": "raw",
               "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"typeId\": 1,\n  \"title\": \"Bache en Avenida Central\",\n  \"description\": \"Bache de aproximadamente 40 cm de diámetro que representa peligro para motocicletas y ciclistas.\",\n  \"latitude\": 9.9325,\n  \"longitude\": -84.0795,\n  \"address\": \"Avenida Central, San José, Costa Rica\",\n  \"zone\": \"Centro\"\n}"
+              "raw": "{\n  \"typeId\": \"507f1f77bcf86cd799439011\",\n  \"title\": \"Bache en Avenida Central\",\n  \"description\": \"Bache de aproximadamente 40 cm de diámetro que representa peligro para motocicletas y ciclistas.\",\n  \"latitude\": 9.9325,\n  \"longitude\": -84.0795,\n  \"address\": \"Avenida Central, San José, Costa Rica\",\n  \"zone\": \"Centro\"\n}"
             },
             "description": "Solo ciudadanos pueden crear reportes. El reportId se guarda automáticamente en {{reportId}}."
           },
@@ -221,7 +221,7 @@
             "body": {
               "mode": "raw",
               "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"status\": \"verified\",\n  \"note\": \"Reporte verificado por inspector de campo.\",\n  \"crewId\": 1\n}"
+              "raw": "{\n  \"status\": \"verified\",\n  \"note\": \"Reporte verificado por inspector de campo.\",\n  \"crewId\": \"{{crewId}}\"\n}"
             },
             "description": "Solo admin. Estados válidos: new | verified | in_progress | repairing | resolved | rejected | duplicate"
           },
@@ -303,9 +303,9 @@
               "host": ["{{baseUrl}}"],
               "path": ["map", "heatmap"],
               "query": [
-                { "key": "typeId", "value": "1",      "disabled": true, "description": "Filtra por tipo de incidente" },
-                { "key": "zone",   "value": "Centro", "disabled": true, "description": "Filtra por zona (substring de address)" },
-                { "key": "status", "value": "new",    "disabled": true, "description": "Filtra por estado" }
+                { "key": "typeId", "value": "507f1f77bcf86cd799439011", "disabled": true, "description": "ObjectId del tipo de incidente" },
+                { "key": "zone",   "value": "Centro",                     "disabled": true, "description": "Filtra por zona (substring de address)" },
+                { "key": "status", "value": "new",                        "disabled": true, "description": "Filtra por estado" }
               ]
             },
             "description": "Endpoint público (sin auth). Devuelve puntos agrupados por lat/lng redondeada a 3 decimales (~111m). Excluye reportes con status rejected o duplicate."
@@ -321,8 +321,8 @@
               "host": ["{{baseUrl}}"],
               "path": ["map", "reports"],
               "query": [
-                { "key": "typeId", "value": "1",      "disabled": true, "description": "Filtra por tipo de incidente" },
-                { "key": "zone",   "value": "Centro", "disabled": true, "description": "Filtra por zona (substring de address)" }
+                { "key": "typeId", "value": "507f1f77bcf86cd799439011", "disabled": true, "description": "ObjectId del tipo de incidente" },
+                { "key": "zone",   "value": "Centro",                     "disabled": true, "description": "Filtra por zona (substring de address)" }
               ]
             },
             "description": "Endpoint público (sin auth). Versión simplificada para el mapa: id, lat, lng, status, typeName, zone."
