@@ -1,16 +1,31 @@
 package com.vialreport.app.data.remote.dto
 
+data class CitizenDto(
+    val id: String,
+    val name: String,
+    val email: String,
+    val role: String
+)
+
+data class IncidentTypeDto(
+    val id: String,
+    val name: String,
+    val icon: String,
+    val color: String,
+    val defaultPriority: Int
+)
+
 data class ReportDto(
     val id: String,
+    val citizen: CitizenDto,
+    val type: IncidentTypeDto,
     val title: String,
     val description: String,
-    val type: String,
     val status: String,
     val priority: String,
     val address: String,
     val latitude: Double,
     val longitude: Double,
-    val citizenName: String,
     val createdAt: String?,
     val updatedAt: String?
 )

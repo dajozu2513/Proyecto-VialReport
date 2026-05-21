@@ -7,27 +7,6 @@ import javax.inject.Inject
 class UpdateReportUseCase @Inject constructor(
     private val repository: IReportRepository
 ) {
-    suspend operator fun invoke(
-        id: String,
-        title: String,
-        description: String,
-        type: String,
-        status: String,
-        priority: String,
-        address: String,
-        latitude: Double,
-        longitude: Double,
-        citizenName: String
-    ): Report = repository.update(
-        id = id,
-        title = title,
-        description = description,
-        type = type,
-        status = status,
-        priority = priority,
-        address = address,
-        latitude = latitude,
-        longitude = longitude,
-        citizenName = citizenName
-    )
+    suspend operator fun invoke(id: String, status: String): Report =
+        repository.updateStatus(id, status)
 }

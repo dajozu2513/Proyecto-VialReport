@@ -1,6 +1,8 @@
 package com.vialreport.app.core.di
 
+import com.vialreport.app.data.repository.AuthRepositoryImpl
 import com.vialreport.app.data.repository.ReportRepositoryImpl
+import com.vialreport.app.domain.repository.IAuthRepository
 import com.vialreport.app.domain.repository.IReportRepository
 import dagger.Binds
 import dagger.Module
@@ -14,7 +16,9 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindReportRepository(
-        impl: ReportRepositoryImpl
-    ): IReportRepository
+    abstract fun bindReportRepository(impl: ReportRepositoryImpl): IReportRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAuthRepository(impl: AuthRepositoryImpl): IAuthRepository
 }
