@@ -23,20 +23,28 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,11 +69,19 @@ private const val BASE_URL = "https://proyecto-vialreport-8it4.onrender.com"
 fun ReportDetailScreen(
     onBack: () -> Unit,
     onEdit: (String) -> Unit,
+    onStatusChanged: () -> Unit = {},
     viewModel: ReportDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val report = state.report
     val context = LocalContext.current
+
+    LaunchedEffect(state.statusSaved) {
+        if (state.statusSaved) {
+            onStatusChanged()
+            viewModel.clearStatusSaved()
+        }
+    }
 
     val photoPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -119,6 +135,17 @@ fun ReportDetailScreen(
 
                 report != null -> {
                     ReportDetailContent(report = report)
+
+                    if (state.isAdmin) {
+                        HorizontalDivider()
+                        StatusSection(
+                            currentStatus   = report.status,
+                            isChanging      = state.isChangingStatus,
+                            statusError     = state.statusError,
+                            onChangeStatus  = viewModel::changeStatus,
+                            onClearError    = viewModel::clearStatusError
+                        )
+                    }
 
                     HorizontalDivider()
 
@@ -246,6 +273,63 @@ private fun ReportDetailContent(report: Report) {
 
     DetailRow(label = "Creado", value = report.createdAt)
     DetailRow(label = "Actualizado", value = report.updatedAt)
+}
+
+private val ALL_STATUSES = listOf("new", "verified", "in_progress", "repairing", "resolved", "rejected", "duplicate")
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StatusSection(
+    currentStatus: String,
+    isChanging: Boolean,
+    statusError: String?,
+    onChangeStatus: (String) -> Unit,
+    onClearError: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var selected by remember(currentStatus) { mutableStateOf(currentStatus) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Cambiar estado", style = MaterialTheme.typography.titleSmall)
+
+        statusError?.let {
+            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+            OutlinedTextField(
+                value = statusLabel(selected),
+                onValueChange = {},
+                readOnly = true,
+                modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                label = { Text("Estado") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                ALL_STATUSES.forEach { status ->
+                    DropdownMenuItem(
+                        text = { Text(statusLabel(status)) },
+                        onClick = { selected = status; expanded = false; onClearError() }
+                    )
+                }
+            }
+        }
+
+        Button(
+            onClick = { onChangeStatus(selected) },
+            enabled = !isChanging && selected != currentStatus,
+            modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+        ) {
+            if (isChanging) {
+                CircularProgressIndicator(modifier = androidx.compose.ui.Modifier.size(18.dp),
+                    strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
+                Text("  Guardando...", modifier = androidx.compose.ui.Modifier.padding(start = 4.dp))
+            } else {
+                Text("Guardar estado")
+            }
+        }
+    }
 }
 
 @Composable

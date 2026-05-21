@@ -48,7 +48,8 @@ fun AppNavGraph(tokenStore: TokenStore) {
                     tokenStore.clear()
                     navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
                 },
-                shouldRefresh = shouldRefresh
+                shouldRefresh = shouldRefresh,
+                userName      = tokenStore.userName
             )
         }
 
@@ -57,8 +58,11 @@ fun AppNavGraph(tokenStore: TokenStore) {
             arguments = listOf(navArgument("id") { type = NavType.StringType })
         ) {
             ReportDetailScreen(
-                onBack = { navController.popBackStack() },
-                onEdit = { id -> navController.navigate(Routes.form(id)) }
+                onBack          = { navController.popBackStack() },
+                onEdit          = { id -> navController.navigate(Routes.form(id)) },
+                onStatusChanged = {
+                    navController.previousBackStackEntry?.savedStateHandle?.set("refresh_list", true)
+                }
             )
         }
 

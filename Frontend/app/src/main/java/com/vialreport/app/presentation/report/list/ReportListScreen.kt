@@ -60,6 +60,7 @@ fun ReportListScreen(
     onEditClick: (String) -> Unit,
     onLogout: () -> Unit,
     shouldRefresh: Boolean,
+    userName: String? = null,
     viewModel: ReportListViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -71,7 +72,17 @@ fun ReportListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("VialReport") },
+                title = {
+                    Column {
+                        Text("VialReport")
+                        if (userName != null)
+                            Text(
+                                text = "Hola, $userName",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                    }
+                },
                 actions = {
                     IconButton(onClick = onLogout) {
                         Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Cerrar sesión")

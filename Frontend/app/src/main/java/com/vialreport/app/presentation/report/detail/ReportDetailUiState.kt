@@ -6,6 +6,10 @@ data class ReportDetailUiState(
     val isLoading: Boolean = false,
     val report: Report? = null,
     val error: String? = null,
+    val isAdmin: Boolean = false,
     val isUploadingPhoto: Boolean = false,
-    val photoError: String? = null
+    val photoError: String? = null,
+    val isChangingStatus: Boolean = false,
+    val statusError: String? = null,
+    val statusSaved: Boolean = false
 )

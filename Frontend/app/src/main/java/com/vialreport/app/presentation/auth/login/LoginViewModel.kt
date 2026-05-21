@@ -39,7 +39,15 @@ class LoginViewModel @Inject constructor(
             _uiState.value = if (result.isSuccess) {
                 LoginUiState.Success
             } else {
-                LoginUiState.Error(result.exceptionOrNull()?.message ?: "Error al iniciar sesión")
+                val msg = result.exceptionOrNull()?.message ?: ""
+                LoginUiState.Error(
+                    when {
+                        msg.contains("401") -> "Correo o contraseña incorrectos"
+                        msg.contains("404") -> "Usuario no encontrado"
+                        msg.isBlank()       -> "Error al iniciar sesión"
+                        else                -> msg
+                    }
+                )
             }
         }
     }

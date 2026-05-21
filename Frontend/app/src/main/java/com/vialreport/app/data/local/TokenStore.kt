@@ -15,5 +15,15 @@ class TokenStore @Inject constructor(
         get() = prefs.getString("jwt_token", null)
         set(value) = prefs.edit().putString("jwt_token", value).apply()
 
+    var role: String?
+        get() = prefs.getString("user_role", null)
+        set(value) = prefs.edit().putString("user_role", value).apply()
+
+    var userName: String?
+        get() = prefs.getString("user_name", null)
+        set(value) = prefs.edit().putString("user_name", value).apply()
+
+    val isAdmin: Boolean get() = role == "admin"
+
     fun clear() = prefs.edit().clear().apply()
 }
