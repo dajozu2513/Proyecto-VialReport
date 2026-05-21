@@ -5,11 +5,16 @@ import com.vialreport.app.data.remote.dto.IncidentTypeDto
 import com.vialreport.app.data.remote.dto.ReportDto
 import com.vialreport.app.data.remote.dto.ReportRequestDto
 import com.vialreport.app.data.remote.dto.UpdateStatusRequestDto
+
+import com.vialreport.app.data.remote.dto.PhotoDto
+import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Part
 import retrofit2.http.Path
 
 interface ReportApi {
@@ -40,4 +45,11 @@ interface ReportApi {
 
     @GET("incident-types")
     suspend fun getIncidentTypes(): ApiResponseDto<List<IncidentTypeDto>>
+
+    @Multipart
+    @POST("reports/{id}/photos")
+    suspend fun uploadPhoto(
+        @Path("id") id: String,
+        @Part photo: MultipartBody.Part
+    ): ApiResponseDto<PhotoDto>
 }

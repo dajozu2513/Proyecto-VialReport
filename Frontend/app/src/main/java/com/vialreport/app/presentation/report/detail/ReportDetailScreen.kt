@@ -1,16 +1,29 @@
 package com.vialreport.app.presentation.report.detail
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -26,15 +39,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.vialreport.app.domain.model.Report
+import com.vialreport.app.domain.model.ReportPhoto
 import com.vialreport.app.presentation.report.util.priorityColor
 import com.vialreport.app.presentation.report.util.priorityLabel
 import com.vialreport.app.presentation.report.util.statusColor
 import com.vialreport.app.presentation.report.util.statusLabel
 import com.vialreport.app.presentation.report.util.typeLabel
+
+private const val BASE_URL = "https://proyecto-vialreport-8it4.onrender.com"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +65,17 @@ fun ReportDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val report = state.report
+    val context = LocalContext.current
+
+    val photoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        uri?.let {
+            val mimeType = context.contentResolver.getType(it) ?: "image/jpeg"
+            val bytes = context.contentResolver.openInputStream(it)?.readBytes() ?: return@let
+            viewModel.uploadPhoto(bytes, mimeType)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -88,6 +119,89 @@ fun ReportDetailScreen(
 
                 report != null -> {
                     ReportDetailContent(report = report)
+
+                    HorizontalDivider()
+
+                    PhotosSection(
+                        photos          = report.photos,
+                        isUploading     = state.isUploadingPhoto,
+                        photoError      = state.photoError,
+                        onAddPhoto      = {
+                            photoPicker.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                        onClearError    = viewModel::clearPhotoError
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PhotosSection(
+    photos: List<ReportPhoto>,
+    isUploading: Boolean,
+    photoError: String?,
+    onAddPhoto: () -> Unit,
+    onClearError: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Fotos (${photos.size})", style = MaterialTheme.typography.titleSmall)
+
+            Button(
+                onClick = onAddPhoto,
+                enabled = !isUploading
+            ) {
+                if (isUploading) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary)
+                } else {
+                    Icon(Icons.Default.AddPhotoAlternate, contentDescription = null,
+                        modifier = Modifier.size(18.dp))
+                }
+                Text(
+                    text = if (isUploading) "  Validando..." else "  Agregar foto",
+                    modifier = Modifier.padding(start = 4.dp)
+                )
+            }
+        }
+
+        photoError?.let { error ->
+            Text(
+                text = error,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
+        if (photos.isEmpty() && !isUploading) {
+            Text(
+                text = "Sin fotos adjuntas",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                photos.forEach { photo ->
+                    AsyncImage(
+                        model = "$BASE_URL${photo.url}",
+                        contentDescription = "Foto del reporte",
+                        modifier = Modifier
+                            .width(160.dp)
+                            .height(120.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop
+                    )
                 }
             }
         }

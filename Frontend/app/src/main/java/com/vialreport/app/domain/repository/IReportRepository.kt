@@ -2,6 +2,7 @@ package com.vialreport.app.domain.repository
 
 import com.vialreport.app.domain.model.IncidentType
 import com.vialreport.app.domain.model.Report
+import com.vialreport.app.domain.model.ReportPhoto
 
 interface IReportRepository {
 
@@ -33,4 +34,6 @@ interface IReportRepository {
     suspend fun updateStatus(id: String, status: String): Report
 
     suspend fun delete(id: String): Boolean
+
+    suspend fun uploadPhoto(reportId: String, imageBytes: ByteArray, mimeType: String): ReportPhoto
 }

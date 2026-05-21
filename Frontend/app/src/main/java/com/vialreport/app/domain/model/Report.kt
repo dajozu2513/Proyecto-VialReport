@@ -1,5 +1,7 @@
 package com.vialreport.app.domain.model
 
+data class ReportPhoto(val id: String, val url: String, val uploadedAt: String)
+
 data class Report(
     val id: String,
     val title: String,
@@ -12,5 +14,6 @@ data class Report(
     val longitude: Double,
     val citizenName: String,
     val createdAt: String,
-    val updatedAt: String
+    val updatedAt: String,
+    val photos: List<ReportPhoto> = emptyList()
 )

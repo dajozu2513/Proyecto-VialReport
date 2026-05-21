@@ -6,7 +6,11 @@ import com.vialreport.app.data.remote.dto.UpdateStatusRequestDto
 import com.vialreport.app.data.remote.mapper.toDomain
 import com.vialreport.app.domain.model.IncidentType
 import com.vialreport.app.domain.model.Report
+import com.vialreport.app.domain.model.ReportPhoto
 import com.vialreport.app.domain.repository.IReportRepository
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
 
 class ReportRepositoryImpl @Inject constructor(
@@ -56,4 +60,12 @@ class ReportRepositoryImpl @Inject constructor(
 
     override suspend fun delete(id: String): Boolean =
         runCatching { api.deleteReport(id); true }.getOrDefault(false)
+
+    override suspend fun uploadPhoto(reportId: String, imageBytes: ByteArray, mimeType: String): ReportPhoto {
+        val ext = when (mimeType) { "image/png" -> "png"; "image/webp" -> "webp"; else -> "jpg" }
+        val body = imageBytes.toRequestBody(mimeType.toMediaType())
+        val part = MultipartBody.Part.createFormData("photo", "photo.$ext", body)
+        val data = api.uploadPhoto(reportId, part).data ?: error("Error al subir foto")
+        return ReportPhoto(data.id, data.url, data.uploadedAt)
+    }
 }

@@ -15,6 +15,13 @@ data class IncidentTypeDto(
     val defaultPriority: Int
 )
 
+data class PhotoDto(
+    val id: String,
+    val url: String,
+    val uploadedAt: String,
+    val aiApproved: Boolean = true
+)
+
 data class ReportDto(
     val id: String,
     val citizen: CitizenDto,
@@ -26,6 +33,7 @@ data class ReportDto(
     val address: String,
     val latitude: Double,
     val longitude: Double,
+    val photos: List<PhotoDto>? = null,
     val createdAt: String?,
     val updatedAt: String?
 )

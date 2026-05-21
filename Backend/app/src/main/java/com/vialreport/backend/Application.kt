@@ -12,8 +12,10 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.statuspages.*
+import io.ktor.server.http.content.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import java.io.File
 import kotlinx.serialization.json.Json
 
 fun main(args: Array<String>) = EngineMain.main(args)
@@ -102,6 +104,8 @@ fun Application.module() {
         get("/") {
             call.respond(mapOf("status" to "VialReport API corriendo ✓"))
         }
+
+        staticFiles("/uploads", File(uploadDir))
 
         authRoutes(authService, userRepository)
         reportRoutes(reportService, photoService)

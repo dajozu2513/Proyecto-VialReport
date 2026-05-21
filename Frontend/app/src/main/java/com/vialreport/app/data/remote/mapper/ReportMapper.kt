@@ -2,6 +2,7 @@ package com.vialreport.app.data.remote.mapper
 
 import com.vialreport.app.data.remote.dto.ReportDto
 import com.vialreport.app.domain.model.Report
+import com.vialreport.app.domain.model.ReportPhoto
 
 fun ReportDto.toDomain(): Report = Report(
     id          = id,
@@ -15,5 +16,6 @@ fun ReportDto.toDomain(): Report = Report(
     longitude   = longitude,
     citizenName = citizen.name,
     createdAt   = createdAt ?: "",
-    updatedAt   = updatedAt ?: createdAt ?: ""
+    updatedAt   = updatedAt ?: createdAt ?: "",
+    photos      = photos?.map { ReportPhoto(it.id, it.url, it.uploadedAt) } ?: emptyList()
 )
