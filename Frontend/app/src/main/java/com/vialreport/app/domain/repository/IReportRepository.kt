@@ -1,5 +1,6 @@
 package com.vialreport.app.domain.repository
 
+import com.vialreport.app.domain.model.IncidentType
 import com.vialreport.app.domain.model.Report
 
 interface IReportRepository {
@@ -8,30 +9,18 @@ interface IReportRepository {
 
     suspend fun getById(id: String): Report?
 
+    suspend fun getIncidentTypes(): List<IncidentType>
+
     suspend fun create(
+        typeId: String,
         title: String,
         description: String,
-        type: String,
-        status: String,
-        priority: String,
-        address: String,
         latitude: Double,
         longitude: Double,
-        citizenName: String
+        address: String
     ): Report
 
-    suspend fun update(
-        id: String,
-        title: String,
-        description: String,
-        type: String,
-        status: String,
-        priority: String,
-        address: String,
-        latitude: Double,
-        longitude: Double,
-        citizenName: String
-    ): Report
+    suspend fun updateStatus(id: String, status: String): Report
 
     suspend fun delete(id: String): Boolean
 }

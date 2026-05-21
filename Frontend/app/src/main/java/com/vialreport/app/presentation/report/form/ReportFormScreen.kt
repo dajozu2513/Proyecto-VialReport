@@ -36,12 +36,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vialreport.app.presentation.report.util.priorityLabel
+import com.vialreport.app.domain.model.IncidentType
 import com.vialreport.app.presentation.report.util.statusLabel
-import com.vialreport.app.presentation.report.util.typeLabel
 
-private val TYPES = listOf("pothole", "damaged_signal", "street_lighting", "flooding", "road_debris")
-private val PRIORITIES = listOf("low", "medium", "high", "critical")
 private val STATUSES = listOf("new", "verified", "in_progress", "repairing", "resolved", "rejected")
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,13 +65,9 @@ fun ReportFormScreen(
 
         if (state.isLoading) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
+            ) { CircularProgressIndicator() }
             return@Scaffold
         }
 
@@ -107,14 +100,6 @@ fun ReportFormScreen(
             )
 
             OutlinedTextField(
-                value = state.citizenName,
-                onValueChange = viewModel::onCitizenNameChange,
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Nombre del ciudadano *") },
-                singleLine = true
-            )
-
-            OutlinedTextField(
                 value = state.address,
                 onValueChange = viewModel::onAddressChange,
                 modifier = Modifier.fillMaxWidth(),
@@ -140,27 +125,19 @@ fun ReportFormScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
 
-            DropdownField(
-                label = "Tipo de incidente",
-                selected = state.type,
-                options = TYPES,
-                displayLabel = ::typeLabel,
-                onSelected = viewModel::onTypeChange
-            )
-
-            DropdownField(
-                label = "Prioridad",
-                selected = state.priority,
-                options = PRIORITIES,
-                displayLabel = ::priorityLabel,
-                onSelected = viewModel::onPriorityChange
-            )
+            if (state.incidentTypes.isNotEmpty()) {
+                IncidentTypeDropdown(
+                    selected    = state.typeId,
+                    options     = state.incidentTypes,
+                    onSelected  = viewModel::onTypeIdChange
+                )
+            }
 
             if (state.isEdit) {
-                DropdownField(
-                    label = "Estado",
-                    selected = state.status,
-                    options = STATUSES,
+                StringDropdownField(
+                    label      = "Estado",
+                    selected   = state.status,
+                    options    = STATUSES,
                     displayLabel = ::statusLabel,
                     onSelected = viewModel::onStatusChange
                 )
@@ -179,7 +156,37 @@ fun ReportFormScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DropdownField(
+private fun IncidentTypeDropdown(
+    selected: String,
+    options: List<IncidentType>,
+    onSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedName = options.find { it.id == selected }?.let { "${it.icon} ${it.name}" } ?: ""
+
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = selectedName,
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
+            label = { Text("Tipo de incidente *") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { type ->
+                DropdownMenuItem(
+                    text = { Text("${type.icon} ${type.name}") },
+                    onClick = { onSelected(type.id); expanded = false }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StringDropdownField(
     label: String,
     selected: String,
     options: List<String>,
@@ -188,32 +195,20 @@ private fun DropdownField(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it }
-    ) {
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
         OutlinedTextField(
             value = displayLabel(selected),
             onValueChange = {},
             readOnly = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable),
             label = { Text(label) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
         )
-
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(displayLabel(option)) },
-                    onClick = {
-                        onSelected(option)
-                        expanded = false
-                    }
+                    onClick = { onSelected(option); expanded = false }
                 )
             }
         }
