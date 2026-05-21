@@ -37,9 +37,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vialreport.app.domain.model.IncidentType
-import com.vialreport.app.presentation.report.util.statusLabel
-
-private val STATUSES = listOf("new", "verified", "in_progress", "repairing", "resolved", "rejected")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,16 +127,6 @@ fun ReportFormScreen(
                     selected    = state.typeId,
                     options     = state.incidentTypes,
                     onSelected  = viewModel::onTypeIdChange
-                )
-            }
-
-            if (state.isEdit) {
-                StringDropdownField(
-                    label      = "Estado",
-                    selected   = state.status,
-                    options    = STATUSES,
-                    displayLabel = ::statusLabel,
-                    onSelected = viewModel::onStatusChange
                 )
             }
 

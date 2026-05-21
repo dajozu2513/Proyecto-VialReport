@@ -36,6 +36,19 @@ class ReportRepositoryImpl @Inject constructor(
         return api.createReport(request).data!!.toDomain()
     }
 
+    override suspend fun update(
+        id: String,
+        typeId: String,
+        title: String,
+        description: String,
+        latitude: Double,
+        longitude: Double,
+        address: String
+    ): Report {
+        val request = ReportRequestDto(typeId, title, description, latitude, longitude, address)
+        return api.updateReport(id, request).data!!.toDomain()
+    }
+
     override suspend fun updateStatus(id: String, status: String): Report {
         val request = UpdateStatusRequestDto(status)
         return api.updateStatus(id, request).data!!.toDomain()

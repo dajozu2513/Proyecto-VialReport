@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Working Directory
+
+**IMPORTANT**: Always work directly in `C:\Users\joels\Projects\Materias\Plataformas Moviles\VialReport\` (the local project), NOT in `.claude/worktrees/`. The user has Android Studio open and needs to see changes in real-time.
+
+---
+
 ## Project Overview
 
 VialReport is a road incident reporting application with two separate Gradle projects:
@@ -19,12 +25,11 @@ Both projects manage dependencies via version catalogs in `gradle/libs.versions.
 Run from `Frontend/`:
 
 ```bash
-./gradlew build                    # Full build
-./gradlew assembleDebug            # Debug APK
-./gradlew installDebug             # Install on connected device/emulator
-./gradlew test                     # Unit tests
-./gradlew connectedAndroidTest     # Instrumented tests (requires device)
-./gradlew test --tests "com.vialreport.app.ExampleUnitTest"  # Single test class
+./gradlew build
+./gradlew assembleDebug
+./gradlew installDebug
+./gradlew test
+./gradlew test --tests "com.vialreport.app.ExampleUnitTest"
 ```
 
 ### Backend (Ktor)
@@ -32,33 +37,48 @@ Run from `Frontend/`:
 Run from `Backend/`:
 
 ```bash
-./gradlew build                    # Full build
-./gradlew :app:run                 # Run the server
-./gradlew :app:shadowJar           # Build fat JAR
-./gradlew test                     # Unit tests
-./gradlew test --tests "com.vialreport.backend.ExampleUnitTest"  # Single test class
+./gradlew build
+./gradlew :app:run
+./gradlew :app:shadowJar
+./gradlew test
 ```
 
-Backend reads all config from environment variables (see `application.conf`): `MONGODB_URI`, `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`, `GEMINI_API_KEY` (optional — skips AI photo filter if blank), `UPLOAD_DIR` (defaults to `./uploads`), `PORT` (defaults to 8080).
+Backend reads all config from environment variables: `MONGODB_URI`, `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`, `GEMINI_API_KEY` (optional), `UPLOAD_DIR` (default `./uploads`), `PORT` (default 8080).
+
+**Backend deployed at**: `https://proyecto-vialreport-8it4.onrender.com/`
 
 ---
 
 ## Frontend Architecture
 
-Clean Architecture with MVVM, organized into four layers under `app/src/main/java/com/vialreport/app/`:
+Clean Architecture with MVVM under `app/src/main/java/com/vialreport/app/`:
 
-- **`core/`** — Hilt application entry point (`VialReportApp.kt`) and DI modules (`NetworkModule`, `RepositoryModule`)
-- **`data/`** — Retrofit API interface (`ReportApi`), DTOs, mappers, and `ReportRepositoryImpl`
-- **`domain/`** — Domain models, `IReportRepository` interface, and use cases (one class per operation in `usecase/report/`)
-- **`presentation/`** — Compose screens, ViewModels, and sealed `UiState` per feature; navigation graph in `AppNavGraph.kt`
+- **`core/`** — Hilt app entry point, DI modules (`NetworkModule`, `RepositoryModule`), `AuthInterceptor`
+- **`data/local/`** — `TokenStore` (SharedPreferences wrapper for JWT)
+- **`data/remote/api/`** — `ReportApi`, `AuthApi`
+- **`data/remote/dto/`** — `ApiResponseDto<T>`, `ReportDto`, `AuthDto`, `ReportRequestDto`, `UpdateStatusRequestDto`
+- **`data/remote/mapper/`** — `ReportMapper` (DTO → domain)
+- **`data/repository/`** — `ReportRepositoryImpl`, `AuthRepositoryImpl`
+- **`domain/model/`** — `Report`, `IncidentType`, `User`
+- **`domain/repository/`** — `IReportRepository`, `IAuthRepository`
+- **`domain/usecase/auth/`** — `LoginUseCase` (returns `Result<User>`), `RegisterUseCase` (returns `Result<User>`), `IsLoggedInUseCase`, `LogoutUseCase`
+- **`domain/usecase/report/`** — `GetAllReportsUseCase`, `GetReportByIdUseCase`, `CreateReportUseCase`, `UpdateReportUseCase`, `DeleteReportUseCase`, `GetIncidentTypesUseCase`
+- **`presentation/auth/login/`** — `LoginScreen`, `LoginViewModel`, `LoginUiState` (sealed: Idle/Loading/Success/Error)
+- **`presentation/auth/register/`** — `RegisterScreen`, `RegisterViewModel`, `RegisterUiState` (sealed)
+- **`presentation/report/`** — list, detail, form screens with ViewModels and UiStates
+- **`presentation/navigation/`** — `AppNavGraph`, `Routes`
 
-**State management**: `StateFlow` + `viewModelScope` coroutines. ViewModels combine flows with `combine()` and use `stateIn()`. `SavedStateHandle` persists filter/query state across process death.
+**Auth flow**: `AppNavGraph` checks `TokenStore.token` on start → LOGIN if null, LIST if present. After login/register the token is saved automatically. `AuthInterceptor` injects `Authorization: Bearer <token>` in every OkHttp request.
 
-**Navigation**: Jetpack Compose Navigation with three routes in `Routes.kt`: LIST, DETAIL (path param `{id}`), FORM (query param `?id={id}`). Screens signal refresh back to the list via `savedStateHandle`.
+**API base URL**: `https://proyecto-vialreport-8it4.onrender.com/`
 
-**API**: Currently points to a MockAPI endpoint (`https://69d49ba8d396bd74235d42e9.mockapi.io/api/v1/`). Base URL is configured in `NetworkModule` with GSON and OkHttp logging at BODY level.
+**State management**: `StateFlow` + `viewModelScope`. `LoginUiState`/`RegisterUiState` use sealed classes. Report ViewModels use data class UiState.
 
-**DI**: Hilt throughout. `RepositoryModule` binds `IReportRepository` → `ReportRepositoryImpl`.
+**Navigation routes** (`Routes.kt`): `LOGIN`, `REGISTER`, `LIST`, `DETAIL/{id}`, `FORM?id={id}`.
+
+**Incident types**: Loaded from public `/incident-types` endpoint (no auth needed) on form open. The form dropdown shows real backend types with emoji icons.
+
+**DI**: Hilt. `RepositoryModule` binds both `IReportRepository` and `IAuthRepository`.
 
 ---
 
@@ -67,31 +87,30 @@ Clean Architecture with MVVM, organized into four layers under `app/src/main/jav
 Service-oriented with Repository pattern under `app/src/main/java/com/vialreport/backend/`:
 
 - **`config/`** — `Database.kt` (MongoDB Atlas via `MongoClient`; seeds 8 default `IncidentType` docs on first run), `Security.kt` (JWT config)
-- **`model/`** — Kotlin data classes backed by MongoDB BSON `ObjectId`: `Report`, `User`, `Crew`, `IncidentType`, `Notification`, `ReportPhoto`, `ReportStatusLog`
-- **`dto/`** — Request/response payloads decoupled from DB models; `ApiResponse<T>` is the generic response wrapper
-- **`repository/`** — MongoDB coroutine driver operations (no ORM/Exposed)
-- **`service/`** — Business logic; services call repositories and enforce rules; `PhotoAiService` calls Gemini API to validate uploaded images
-- **`routes/`** — Ktor routing; each file registers routes for a resource
-- **`util/`** — Custom exceptions (`NotFoundException`, `UnauthorizedException`, `BadRequestException`, `ConflictException`), role constants (`ADMIN`, `CITIZEN`, `CREW_MEMBER`), and `ReportStatus`/`ReportPriority` validators
+- **`model/`** — Kotlin data classes backed by BSON `ObjectId`: `Report`, `User`, `Crew`, `IncidentType`, `Notification`, `ReportPhoto`, `ReportStatusLog`
+- **`dto/`** — Request/response payloads; `ApiResponse<T>` is the generic wrapper
+- **`repository/`** — MongoDB coroutine driver operations
+- **`service/`** — Business logic; `PhotoAiService` calls Gemini API to validate uploaded images
+- **`routes/`** — `ReportRoutes`, `AuthRoutes`, `CrewRoutes`, `NotificationRoutes`, `IncidentTypeRoutes`, `MapRoutes`, `AdminRoutes`
+- **`util/`** — Exceptions, `UserRole` (citizen/admin/crew_member), `ReportStatus`, `ReportPriority`
 
-**Application startup** (`Application.kt`): MongoDB init → content negotiation (kotlinx.serialization) → CORS (any host) → global error handling via `StatusPages` → JWT auth → manual DI (repositories and services instantiated and passed to routes).
+**Auth**: JWT (Auth0). All `/reports` routes require auth. `/incident-types` and `/auth/*` are public.
 
-**Auth**: JWT via Auth0 library. Passwords hashed with jBCrypt. Claims carry `role` and `userId`. Citizens see only their own reports; admins see all and can change status.
-
-**Key REST endpoints** (in `ReportRoutes.kt`):
+**Key REST endpoints**:
 ```
-GET    /reports               — list (role-filtered; admin supports ?status=&typeId=&zone=)
-GET    /reports/{id}          — detail
-POST   /reports               — create (citizen only)
-PUT    /reports/{id}/status   — update status (admin only)
-DELETE /reports/{id}          — delete
-POST   /reports/{id}/photos   — upload photo (multipart; AI-validated via Gemini)
-GET    /reports/{id}/photos   — list photos (admin only)
+POST   /auth/register
+POST   /auth/login
+GET    /incident-types              — public
+GET    /reports                     — auth required (citizen sees own, admin sees all)
+GET    /reports/{id}                — auth required
+POST   /reports                     — citizen only; body: {typeId, title, description, latitude, longitude, address}
+PUT    /reports/{id}/status         — admin only; body: {status, note?}
+DELETE /reports/{id}                — auth required
+POST   /reports/{id}/photos         — multipart; AI-validated via Gemini
+GET    /reports/{id}/photos         — admin only
 ```
 
-Additional route files: `AuthRoutes.kt`, `CrewRoutes.kt`, `NotificationRoutes.kt`, `IncidentTypeRoutes.kt`, `MapRoutes.kt`, `AdminRoutes.kt`.
-
-**Database**: MongoDB Atlas. Connection URI and all secrets are supplied via environment variables (see configuration below), not `local.properties`.
+**Database**: MongoDB Atlas. All IDs are MongoDB `ObjectId` strings.
 
 ---
 

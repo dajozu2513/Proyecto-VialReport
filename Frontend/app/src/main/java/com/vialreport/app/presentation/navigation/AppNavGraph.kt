@@ -8,8 +8,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.vialreport.app.data.local.TokenStore
-import com.vialreport.app.presentation.auth.LoginScreen
-import com.vialreport.app.presentation.auth.RegisterScreen
+import com.vialreport.app.presentation.auth.login.LoginScreen
+import com.vialreport.app.presentation.auth.register.RegisterScreen
 import com.vialreport.app.presentation.report.detail.ReportDetailScreen
 import com.vialreport.app.presentation.report.form.ReportFormScreen
 import com.vialreport.app.presentation.report.list.ReportListScreen
@@ -23,15 +23,15 @@ fun AppNavGraph(tokenStore: TokenStore) {
 
         composable(Routes.LOGIN) {
             LoginScreen(
-                onLoginSuccess  = { navController.navigate(Routes.LIST) { popUpTo(Routes.LOGIN) { inclusive = true } } },
-                onGoToRegister  = { navController.navigate(Routes.REGISTER) }
+                onLoginSuccess       = { navController.navigate(Routes.LIST) { popUpTo(Routes.LOGIN) { inclusive = true } } },
+                onNavigateToRegister = { navController.navigate(Routes.REGISTER) }
             )
         }
 
         composable(Routes.REGISTER) {
             RegisterScreen(
-                onRegisterSuccess = { navController.navigate(Routes.LIST) { popUpTo(Routes.LOGIN) { inclusive = true } } },
-                onGoToLogin       = { navController.popBackStack() }
+                onRegisterSuccess  = { navController.navigate(Routes.LIST) { popUpTo(Routes.LOGIN) { inclusive = true } } },
+                onNavigateToLogin  = { navController.popBackStack() }
             )
         }
 
@@ -44,6 +44,10 @@ fun AppNavGraph(tokenStore: TokenStore) {
                 onReportClick = { id -> navController.navigate(Routes.detail(id)) },
                 onAddClick    = { navController.navigate(Routes.form(null)) },
                 onEditClick   = { id -> navController.navigate(Routes.form(id)) },
+                onLogout      = {
+                    tokenStore.clear()
+                    navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
+                },
                 shouldRefresh = shouldRefresh
             )
         }

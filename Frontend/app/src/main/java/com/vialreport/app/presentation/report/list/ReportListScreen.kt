@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -57,6 +58,7 @@ fun ReportListScreen(
     onReportClick: (String) -> Unit,
     onAddClick: () -> Unit,
     onEditClick: (String) -> Unit,
+    onLogout: () -> Unit,
     shouldRefresh: Boolean,
     viewModel: ReportListViewModel = hiltViewModel()
 ) {
@@ -68,7 +70,14 @@ fun ReportListScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("VialReport") })
+            TopAppBar(
+                title = { Text("VialReport") },
+                actions = {
+                    IconButton(onClick = onLogout) {
+                        Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Cerrar sesión")
+                    }
+                }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddClick) {

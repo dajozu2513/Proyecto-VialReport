@@ -23,6 +23,12 @@ interface ReportApi {
     @POST("reports")
     suspend fun createReport(@Body request: ReportRequestDto): ApiResponseDto<ReportDto>
 
+    @PUT("reports/{id}")
+    suspend fun updateReport(
+        @Path("id") id: String,
+        @Body request: ReportRequestDto
+    ): ApiResponseDto<ReportDto>
+
     @PUT("reports/{id}/status")
     suspend fun updateStatus(
         @Path("id") id: String,

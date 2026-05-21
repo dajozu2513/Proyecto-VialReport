@@ -137,7 +137,7 @@ class ReportFormViewModel @Inject constructor(
                 if (reportId == null) {
                     createReportUseCase(typeId.value, title.value.trim(), description.value.trim(), lat, lng, address.value.trim())
                 } else {
-                    updateReportUseCase(reportId, status.value)
+                    updateReportUseCase(reportId, typeId.value, title.value.trim(), description.value.trim(), lat, lng, address.value.trim())
                 }
             }
                 .onSuccess { onDone() }

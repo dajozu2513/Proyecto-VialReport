@@ -26,4 +26,8 @@ class AuthRepositoryImpl @Inject constructor(
         tokenStore.token = data.token
         return User(data.user.id, data.user.name, data.user.email, data.user.role)
     }
+
+    override fun isLoggedIn(): Boolean = tokenStore.token != null
+
+    override fun logout() = tokenStore.clear()
 }

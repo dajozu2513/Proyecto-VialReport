@@ -129,6 +129,31 @@ class ReportRepository(db: MongoDatabase) {
         return findById(id)
     }
 
+    suspend fun update(
+        id: String,
+        typeId: String,
+        title: String,
+        description: String,
+        latitude: Double,
+        longitude: Double,
+        address: String
+    ): Report? {
+        if (!ObjectId.isValid(id)) return null
+        col.updateOne(
+            Filters.eq("_id", ObjectId(id)),
+            Updates.combine(
+                Updates.set("typeId",      typeId),
+                Updates.set("title",       title),
+                Updates.set("description", description),
+                Updates.set("latitude",    latitude),
+                Updates.set("longitude",   longitude),
+                Updates.set("address",     address),
+                Updates.set("updatedAt",   LocalDateTime.now().toDate())
+            )
+        )
+        return findById(id)
+    }
+
     suspend fun delete(id: String): Boolean {
         if (!ObjectId.isValid(id)) return false
         return col.deleteOne(Filters.eq("_id", ObjectId(id))).deletedCount > 0

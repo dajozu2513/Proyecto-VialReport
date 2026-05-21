@@ -52,6 +52,24 @@ class ReportService(
         return buildResponse(report.id.toHexString())
     }
 
+    suspend fun update(
+        reportId: String,
+        requesterId: String,
+        requesterRole: String,
+        request: ReportRequest
+    ): ReportResponse {
+        val report = reportRepository.findById(reportId)
+            ?: throw NotFoundException("Reporte $reportId no encontrado")
+        if (requesterRole != UserRole.ADMIN && report.citizenId != requesterId) {
+            throw UnauthorizedException("No tenés permiso para editar este reporte")
+        }
+        incidentTypeRepository.findById(request.typeId)
+            ?: throw NotFoundException("Tipo de incidente no encontrado")
+        reportRepository.update(reportId, request.typeId, request.title, request.description,
+            request.latitude, request.longitude, request.address)
+        return buildResponse(reportId)
+    }
+
     suspend fun updateStatus(
         reportId: String,
         adminId: String,

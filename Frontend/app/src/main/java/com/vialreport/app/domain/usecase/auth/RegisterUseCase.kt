@@ -10,7 +10,6 @@ class RegisterUseCase @Inject constructor(
     suspend operator fun invoke(
         name: String,
         email: String,
-        password: String,
-        phone: String?
-    ): User = repository.register(name, email, password, phone)
+        password: String
+    ): Result<User> = runCatching { repository.register(name, email, password, null) }
 }

@@ -76,6 +76,29 @@ fun Route.reportRoutes(reportService: ReportService, photoService: PhotoService)
                 }
             }
 
+            // PUT /reports/{id} — citizen edits own report fields; admin can edit any
+            put("/{id}") {
+                try {
+                    val principal = call.principal<JWTPrincipal>()!!
+                    val userId    = principal.getClaim("userId", String::class)!!
+                    val role      = principal.getClaim("role", String::class)!!
+                    val id        = call.parameters["id"] ?: throw BadRequestException("ID requerido")
+                    val request   = call.receive<ReportRequest>()
+                    val report    = reportService.update(id, userId, role, request)
+                    call.respond(HttpStatusCode.OK,
+                        ApiResponse(success = true, message = "Reporte actualizado", data = report))
+                } catch (e: UnauthorizedException) {
+                    call.respond(HttpStatusCode.Unauthorized,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado"))
+                } catch (e: NotFoundException) {
+                    call.respond(HttpStatusCode.NotFound,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado"))
+                } catch (e: BadRequestException) {
+                    call.respond(HttpStatusCode.BadRequest,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "Bad request"))
+                }
+            }
+
             // PUT /reports/{id}/status — solo admin
             put("/{id}/status") {
                 try {
