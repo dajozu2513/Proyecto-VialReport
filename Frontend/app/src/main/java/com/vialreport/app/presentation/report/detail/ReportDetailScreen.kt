@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.vialreport.app.domain.model.Report
 import com.vialreport.app.domain.model.ReportPhoto
+import com.vialreport.app.domain.model.StatusLogEntry
 import com.vialreport.app.presentation.report.util.priorityColor
 import com.vialreport.app.presentation.report.util.priorityLabel
 import com.vialreport.app.presentation.report.util.statusColor
@@ -145,6 +146,11 @@ fun ReportDetailScreen(
                             onChangeStatus  = viewModel::changeStatus,
                             onClearError    = viewModel::clearStatusError
                         )
+                    }
+
+                    if (report.statusLog.isNotEmpty()) {
+                        HorizontalDivider()
+                        StatusHistorySection(log = report.statusLog)
                     }
 
                     HorizontalDivider()
@@ -328,6 +334,55 @@ private fun StatusSection(
             } else {
                 Text("Guardar estado")
             }
+        }
+    }
+}
+
+@Composable
+private fun StatusHistorySection(log: List<StatusLogEntry>) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Historial de estados", style = MaterialTheme.typography.titleSmall)
+        log.forEach { entry ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text(statusLabel(entry.oldStatus), style = MaterialTheme.typography.labelSmall) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = statusColor(entry.oldStatus).copy(alpha = 0.15f),
+                                labelColor = statusColor(entry.oldStatus)
+                            )
+                        )
+                        Text("→", style = MaterialTheme.typography.labelMedium)
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text(statusLabel(entry.newStatus), style = MaterialTheme.typography.labelSmall) },
+                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                containerColor = statusColor(entry.newStatus).copy(alpha = 0.15f),
+                                labelColor = statusColor(entry.newStatus)
+                            )
+                        )
+                    }
+                    if (entry.note != null) {
+                        Text(
+                            text = entry.note,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = entry.changedAt.take(16).replace("T", " "),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            if (log.last() != entry) HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
         }
     }
 }

@@ -2,6 +2,8 @@ package com.vialreport.app.presentation.report.form
 
 import com.vialreport.app.domain.model.IncidentType
 
+enum class LocationStatus { IDLE, FETCHING, LOCATED, ERROR }
+
 data class ReportFormUiState(
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
@@ -11,9 +13,17 @@ data class ReportFormUiState(
     val typeId: String = "",
     val status: String = "new",
     val address: String = "",
-    val latitude: String = "",
-    val longitude: String = "",
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val locationStatus: LocationStatus = LocationStatus.IDLE,
+    val locationError: String? = null,
     val incidentTypes: List<IncidentType> = emptyList(),
     val canSave: Boolean = false,
     val error: String? = null
-)
+) {
+    fun recompute() = copy(
+        canSave = title.isNotBlank() && description.isNotBlank() &&
+                  address.isNotBlank() && latitude != null && longitude != null &&
+                  typeId.isNotBlank() && !isLoading && !isSaving
+    )
+}

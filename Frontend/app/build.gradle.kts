@@ -75,6 +75,8 @@ dependencies {
     implementation(libs.androidx.hilt.navigation.compose)
 
     implementation(libs.coil.compose)
+    implementation(libs.osmdroid.android)
+    implementation(libs.play.services.location)
 
     testImplementation(libs.junit)
 

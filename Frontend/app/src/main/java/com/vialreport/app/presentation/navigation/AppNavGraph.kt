@@ -8,8 +8,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.vialreport.app.data.local.TokenStore
+import com.vialreport.app.presentation.admin.AdminStatsScreen
 import com.vialreport.app.presentation.auth.login.LoginScreen
 import com.vialreport.app.presentation.auth.register.RegisterScreen
+import com.vialreport.app.presentation.map.MapScreen
 import com.vialreport.app.presentation.report.detail.ReportDetailScreen
 import com.vialreport.app.presentation.report.form.ReportFormScreen
 import com.vialreport.app.presentation.report.list.ReportListScreen
@@ -48,8 +50,11 @@ fun AppNavGraph(tokenStore: TokenStore) {
                     tokenStore.clear()
                     navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
                 },
+                onMapClick    = { navController.navigate(Routes.MAP) },
+                onStatsClick  = { navController.navigate(Routes.STATS) },
                 shouldRefresh = shouldRefresh,
-                userName      = tokenStore.userName
+                userName      = tokenStore.userName,
+                isAdmin       = tokenStore.isAdmin
             )
         }
 
@@ -77,6 +82,14 @@ fun AppNavGraph(tokenStore: TokenStore) {
                     navController.popBackStack()
                 }
             )
+        }
+
+        composable(Routes.MAP) {
+            MapScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Routes.STATS) {
+            AdminStatsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

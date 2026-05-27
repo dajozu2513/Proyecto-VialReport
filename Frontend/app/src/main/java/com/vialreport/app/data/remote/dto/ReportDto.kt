@@ -22,6 +22,14 @@ data class PhotoDto(
     val aiApproved: Boolean = true
 )
 
+data class StatusLogDto(
+    val id: String,
+    val oldStatus: String,
+    val newStatus: String,
+    val note: String?,
+    val changedAt: String
+)
+
 data class ReportDto(
     val id: String,
     val citizen: CitizenDto,
@@ -34,6 +42,7 @@ data class ReportDto(
     val latitude: Double,
     val longitude: Double,
     val photos: List<PhotoDto>? = null,
+    val statusLog: List<StatusLogDto>? = null,
     val createdAt: String?,
     val updatedAt: String?
 )

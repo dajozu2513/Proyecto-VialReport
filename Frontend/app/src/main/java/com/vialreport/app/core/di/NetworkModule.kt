@@ -2,7 +2,9 @@ package com.vialreport.app.core.di
 
 import com.vialreport.app.core.interceptor.AuthInterceptor
 import com.vialreport.app.data.local.TokenStore
+import com.vialreport.app.data.remote.api.AdminApi
 import com.vialreport.app.data.remote.api.AuthApi
+import com.vialreport.app.data.remote.api.MapApi
 import com.vialreport.app.data.remote.api.ReportApi
 import dagger.Module
 import dagger.Provides
@@ -54,4 +56,12 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideAuthApi(retrofit: Retrofit): AuthApi = retrofit.create(AuthApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideAdminApi(retrofit: Retrofit): AdminApi = retrofit.create(AdminApi::class.java)
+
+    @Provides
+    @Singleton
+    fun provideMapApi(retrofit: Retrofit): MapApi = retrofit.create(MapApi::class.java)
 }

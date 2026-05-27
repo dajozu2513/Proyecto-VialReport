@@ -24,6 +24,7 @@ class RegisterViewModel @Inject constructor(
     var name by mutableStateOf("")
     var email by mutableStateOf("")
     var password by mutableStateOf("")
+    var phone by mutableStateOf("")
 
     fun register() {
         if (name.isBlank() || email.isBlank() || password.isBlank()) {
@@ -36,7 +37,12 @@ class RegisterViewModel @Inject constructor(
         }
         viewModelScope.launch {
             _uiState.value = RegisterUiState.Loading
-            val result = registerUseCase(name.trim(), email.trim(), password)
+            val result = registerUseCase(
+                name  = name.trim(),
+                email = email.trim(),
+                password = password,
+                phone = phone.trim().ifBlank { null }
+            )
             _uiState.value = if (result.isSuccess) {
                 RegisterUiState.Success
             } else {

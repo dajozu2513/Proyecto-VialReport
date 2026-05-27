@@ -105,6 +105,17 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = viewModel.phone,
+                onValueChange = { viewModel.phone = it },
+                label = { Text("Teléfono (opcional)") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                modifier = Modifier.fillMaxWidth()
+            )
+
             Spacer(modifier = Modifier.height(8.dp))
 
             if (uiState is RegisterUiState.Error) {

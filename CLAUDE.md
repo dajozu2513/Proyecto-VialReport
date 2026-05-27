@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 VialReport is a road incident reporting application with two separate Gradle projects:
 - **Frontend/** — Android app (Kotlin + Jetpack Compose)
-- **Backend/** — Ktor REST server (Kotlin)
+- **Backend/** — Ktor REST server (Kotlin), scaffolded as an Android Studio project but runs as a JVM server via Gradle (`EngineMain` + Netty)
 
 Both projects manage dependencies via version catalogs in `gradle/libs.versions.toml`.
 
@@ -67,7 +67,14 @@ Backend reads all config from environment variables: `MONGODB_URI`, `JWT_SECRET`
 3. **Admin stats panel** — backend has `GET /admin/stats` ready
 4. **Crew management** — backend has `CrewRoutes` + `CrewService` complete
 5. **Status change history** — backend already returns `statusLog` in report response; just needs UI
-6. **Phone number on register** — currently not shown in RegisterScreen
+6. ~~**Phone number on register**~~ ✅ Done
+5. ~~**Status change history**~~ ✅ Done
+3. ~~**Admin stats panel**~~ ✅ Done
+1. ~~**Map screen**~~ ✅ Done — `MapScreen` (osmdroid, círculos por estado), `GET /map/reports`
+
+Remaining:
+- **Push notifications** — backend `NotificationService` listo; necesita FCM en Android
+- **Crew management** — backend `CrewRoutes` + `CrewService` completo; falta UI
 
 ---
 
@@ -76,7 +83,7 @@ Backend reads all config from environment variables: `MONGODB_URI`, `JWT_SECRET`
 Clean Architecture with MVVM under `app/src/main/java/com/vialreport/app/`:
 
 - **`core/`** — Hilt app entry point (`VialReportApp`), DI modules (`NetworkModule`, `RepositoryModule`), `AuthInterceptor`
-- **`data/local/`** — `TokenStore`: SharedPreferences storing JWT token, user role, and user name. Exposes `isAdmin: Boolean`
+- **`data/local/`** — `TokenStore`: **primary auth state**; SharedPreferences (`vialreport_prefs`) storing `jwt_token`, `user_role`, `user_name`; exposes `isAdmin: Boolean` and `clear()`. (`TokenManager` is a legacy duplicate that only handles the token — use `TokenStore` everywhere.)
 - **`data/remote/api/`** — `ReportApi`, `AuthApi`
 - **`data/remote/dto/`** — `ApiResponseDto<T>`, `ReportDto` (includes `PhotoDto` list), `AuthDto`, `ReportRequestDto`, `UpdateStatusRequestDto`, `PhotoDto`
 - **`data/remote/mapper/`** — `ReportMapper` (DTO → domain, maps nested photos)
@@ -90,6 +97,7 @@ Clean Architecture with MVVM under `app/src/main/java/com/vialreport/app/`:
 - **`presentation/report/list/`** — list with search + status filter chips; TopAppBar shows name
 - **`presentation/report/detail/`** — photos (horizontal scroll + upload), admin status change section
 - **`presentation/report/form/`** — create/edit form with incident type dropdown from backend
+- **`presentation/report/util/ReportDisplayUtils`** — pure display helpers: `statusLabel/Color()`, `typeLabel()`, `priorityLabel/Color()`; maps backend string values to Spanish UI labels and Material colors
 - **`presentation/navigation/`** — `AppNavGraph` (takes `TokenStore`), `Routes`
 
 **Auth flow**: Start → LOGIN if no token, LIST if token exists. After login/register: token + role + userName saved to `TokenStore`. `AuthInterceptor` injects `Authorization: Bearer <token>` on every request.
@@ -111,13 +119,15 @@ Clean Architecture with MVVM under `app/src/main/java/com/vialreport/app/`:
 
 Service-oriented with Repository pattern under `app/src/main/java/com/vialreport/backend/`:
 
+`Application.kt` wires everything manually: `DatabaseFactory.init()` → repositories → services → `Routing`. No DI framework; all dependencies constructed inline.
+
 - **`config/`** — `Database.kt` (MongoDB Atlas; seeds 8 `IncidentType` docs on first run), `Security.kt` (JWT)
 - **`model/`** — `Report`, `User`, `Crew`, `IncidentType`, `Notification`, `ReportPhoto`, `ReportStatusLog`
 - **`dto/`** — Request/response payloads; `ApiResponse<T>` generic wrapper
-- **`repository/`** — MongoDB coroutine driver (no ORM)
-- **`service/`** — `ReportService`, `AuthService`, `PhotoService`, `PhotoAiService` (Gemini), `NotificationService`, `CrewService`, `MapService`, `AdminService`
+- **`repository/`** — MongoDB coroutine driver (no ORM): `ReportRepository`, `UserRepository`, `IncidentTypeRepository`, `CrewRepository`, `ReportPhotoRepository`, `ReportStatusLogRepository`, `NotificationRepository`
+- **`service/`** — `ReportService`, `AuthService`, `PhotoService`, `PhotoAiService` (Gemini 1.5 Flash), `NotificationService`, `CrewService`, `MapService`, `AdminService`
 - **`routes/`** — `ReportRoutes`, `AuthRoutes`, `CrewRoutes`, `NotificationRoutes`, `IncidentTypeRoutes`, `MapRoutes`, `AdminRoutes`
-- **`util/`** — Exceptions, `UserRole`, `ReportStatus`, `ReportPriority`
+- **`util/`** — `Exceptions` (`NotFoundException`, `BadRequestException`, `UnauthorizedException`); `UserRole`, `ReportStatus` (with `isValid()` / `requiresAdmin()` helpers), `ReportPriority`
 
 **Key REST endpoints**:
 ```
@@ -157,3 +167,4 @@ GET    /notifications                 — user notifications
 | AI photo filter | Google Gemini 1.5 Flash API | — |
 | Android min SDK | — | 24 |
 | Android target SDK | — | 36 |
+| Java target (Frontend) | JVM 17 | — |

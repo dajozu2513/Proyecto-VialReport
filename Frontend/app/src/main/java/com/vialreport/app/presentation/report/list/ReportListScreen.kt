@@ -14,8 +14,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,8 +61,11 @@ fun ReportListScreen(
     onAddClick: () -> Unit,
     onEditClick: (String) -> Unit,
     onLogout: () -> Unit,
+    onMapClick: () -> Unit,
+    onStatsClick: () -> Unit,
     shouldRefresh: Boolean,
     userName: String? = null,
+    isAdmin: Boolean = false,
     viewModel: ReportListViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -84,6 +89,14 @@ fun ReportListScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onMapClick) {
+                        Icon(Icons.Default.Map, contentDescription = "Ver mapa")
+                    }
+                    if (isAdmin) {
+                        IconButton(onClick = onStatsClick) {
+                            Icon(Icons.Default.BarChart, contentDescription = "Estadísticas")
+                        }
+                    }
                     IconButton(onClick = onLogout) {
                         Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Cerrar sesión")
                     }
