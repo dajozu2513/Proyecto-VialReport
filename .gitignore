@@ -29,3 +29,12 @@ Thumbs.db
 
 # Claude local settings
 .claude/settings.local.json
+
+# Claude worktrees / agent artifacts
+.clone/
+.claude/worktrees/
+
+# Node (no es parte del proyecto Android/Kotlin)
+node_modules/
+package.json
+package-lock.json
