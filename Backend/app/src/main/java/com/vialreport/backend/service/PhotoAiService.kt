@@ -36,22 +36,18 @@ class PhotoAiService(private val apiKey: String) {
         val b64 = Base64.getEncoder().encodeToString(imageBytes)
 
         val prompt = """
-            You are a photo validator for a road incident reporting app.
+            Look at this image and answer with exactly one word: YES or NO.
 
-            Step 1 — Is it a real photograph?
-            If the image is a cartoon, anime, drawing, illustration, meme, AI-generated art,
-            screenshot of an app, or any non-photographic content → answer NO immediately.
+            Answer NO if ANY of these is true:
+            - The image is a cartoon, anime, drawing, illustration, meme, clip art, CGI, painting, or digital art of any kind.
+            - The image contains nudity, sexual content, or graphic violence.
+            - The image is a real photo but shows only: food, a selfie, an animal, or an indoor room with no street visible.
 
-            Step 2 — Does it show something related to roads or public infrastructure?
-            Real photos of any outdoor public scene are acceptable: roads, streets, sidewalks,
-            drainage, streetlights, traffic signs, traffic lights, garbage on street, potholes,
-            flooding, landslides, pavement cracks, construction zones.
-            Be lenient: accept night photos, car-window shots, partial views, and imperfect framing.
+            Answer YES only if BOTH are true:
+            - It is a real photograph taken with a camera (not drawn or animated).
+            - It shows any outdoor public area: street, road, sidewalk, pothole, flooding, garbage pile, broken sign, traffic light, landslide, pavement crack, or streetlight.
 
-            Answer NO if the photo clearly shows only: food, people indoors, selfies, animals,
-            private property with no public road visible, or explicit/violent content.
-
-            Reply with a single word only: YES or NO. No explanation.
+            One word only: YES or NO
         """.trimIndent()
 
         val requestBody = GeminiRequest(
@@ -82,7 +78,7 @@ class PhotoAiService(private val apiKey: String) {
             val accepted = when {
                 raw.startsWith("YES") -> { log.info("Gemini: ACEPTADA");                               true  }
                 raw.startsWith("NO")  -> { log.warn("Gemini: RECHAZADA (respuesta: '$raw')");          false }
-                else                  -> { log.warn("Gemini: respuesta ambigua '$raw' — aceptando");   true  }
+                else                  -> { log.warn("Gemini: respuesta ambigua '$raw' — rechazando"); false }
             }
             accepted
         } catch (e: Exception) {
