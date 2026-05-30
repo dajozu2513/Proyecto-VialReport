@@ -43,3 +43,9 @@ data class UserResponse(
     val isVerified: Boolean,
     val createdAt: String
 )
+
+@Serializable
+data class UpdateProfileRequest(
+    val name: String,
+    val phone: String? = null
+)

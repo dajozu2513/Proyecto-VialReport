@@ -5,19 +5,25 @@ import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.Button
@@ -31,12 +37,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,6 +81,17 @@ fun ReportFormScreen(
     val context = LocalContext.current
     val scope   = rememberCoroutineScope()
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
+
+    // ── Photo picker (URI solo para preview local) ────────────
+    var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            pendingPhotoUri = uri
+            val mime  = context.contentResolver.getType(uri) ?: "image/jpeg"
+            val bytes = context.contentResolver.openInputStream(uri)?.readBytes()
+            if (bytes != null) viewModel.onPhotoSelected(bytes, mime)
+        }
+    }
 
     // ── Permission launcher ───────────────────────────────────
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -174,15 +195,24 @@ fun ReportFormScreen(
                 )
             }
 
+            // ── Foto opcional ─────────────────────────────────
+            PendingPhotoSection(
+                pendingUri      = pendingPhotoUri,
+                hasPending      = state.hasPendingPhoto,
+                isUploading     = state.isUploadingPhoto,
+                onPickPhoto     = { photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                onRemovePhoto   = { pendingPhotoUri = null; viewModel.onPhotoPendingRemoved() }
+            )
+
             Button(
                 onClick = { viewModel.save(onSaved) },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = state.canSave
             ) {
-                if (state.isSaving) {
+                if (state.isSaving || state.isUploadingPhoto) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary)
-                    Text("  Guardando...")
+                    Text(if (state.isUploadingPhoto) "  Subiendo foto..." else "  Guardando...")
                 } else {
                     Text("Guardar")
                 }
@@ -332,6 +362,69 @@ private suspend fun reverseGeocode(
         ).joinToString(", ").takeIf { it.isNotBlank() }
     } catch (e: Exception) {
         null // Geocoder falla silenciosamente; el usuario ingresa dirección manualmente
+    }
+}
+
+@Composable
+private fun PendingPhotoSection(
+    pendingUri: Uri?,
+    hasPending: Boolean,
+    isUploading: Boolean,
+    onPickPhoto: () -> Unit,
+    onRemovePhoto: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Foto del incidente (opcional)",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (hasPending && pendingUri != null) {
+            Box(modifier = Modifier.width(160.dp).height(120.dp)) {
+                AsyncImage(
+                    model = pendingUri,
+                    contentDescription = "Foto seleccionada",
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop,
+                    alpha = if (isUploading) 0.5f else 1f
+                )
+                if (isUploading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp).align(Alignment.Center),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(4.dp)
+                            .size(24.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                shape = RoundedCornerShape(50)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconButton(onClick = onRemovePhoto, modifier = Modifier.size(24.dp)) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Quitar foto",
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
+                    }
+                }
+            }
+        } else {
+            OutlinedButton(
+                onClick = onPickPhoto,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.AddPhotoAlternate, contentDescription = null, modifier = Modifier.size(18.dp))
+                Text("  Adjuntar foto")
+            }
+        }
     }
 }
 

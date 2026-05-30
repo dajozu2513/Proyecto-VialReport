@@ -189,6 +189,29 @@ fun Route.reportRoutes(reportService: ReportService, photoService: PhotoService)
                         ApiResponse<Unit>(success = false, message = e.message ?: "Bad request"))
                 }
             }
+
+            // DELETE /reports/{id}/photos/{photoId}
+            delete("/{id}/photos/{photoId}") {
+                try {
+                    val principal = call.principal<JWTPrincipal>()!!
+                    val userId    = principal.getClaim("userId", String::class)!!
+                    val role      = principal.getClaim("role", String::class)!!
+                    val reportId  = call.parameters["id"]      ?: throw BadRequestException("ID requerido")
+                    val photoId   = call.parameters["photoId"] ?: throw BadRequestException("photoId requerido")
+                    photoService.deletePhoto(reportId, photoId, userId, role)
+                    call.respond(HttpStatusCode.OK,
+                        ApiResponse<Unit>(success = true, message = "Foto eliminada"))
+                } catch (e: UnauthorizedException) {
+                    call.respond(HttpStatusCode.Unauthorized,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No autorizado"))
+                } catch (e: NotFoundException) {
+                    call.respond(HttpStatusCode.NotFound,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado"))
+                } catch (e: BadRequestException) {
+                    call.respond(HttpStatusCode.BadRequest,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "Bad request"))
+                }
+            }
         }
     }
 }

@@ -68,4 +68,8 @@ class ReportRepositoryImpl @Inject constructor(
         val data = api.uploadPhoto(reportId, part).data ?: error("Error al subir foto")
         return ReportPhoto(data.id, data.url, data.uploadedAt)
     }
+
+    override suspend fun deletePhoto(reportId: String, photoId: String) {
+        api.deletePhoto(reportId, photoId)
+    }
 }

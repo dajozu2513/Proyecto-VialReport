@@ -13,11 +13,17 @@ data class RegisterRequestDto(
     val role: String = "citizen"
 )
 
+data class UpdateProfileRequestDto(
+    val name: String,
+    val phone: String? = null
+)
+
 data class UserDto(
     val id: String,
     val name: String,
     val email: String,
-    val role: String
+    val role: String,
+    val phone: String? = null
 )
 
 data class AuthResponseDto(

@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddPhotoAlternate
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -156,15 +158,17 @@ fun ReportDetailScreen(
                     HorizontalDivider()
 
                     PhotosSection(
-                        photos          = report.photos,
-                        isUploading     = state.isUploadingPhoto,
-                        photoError      = state.photoError,
-                        onAddPhoto      = {
+                        photos           = report.photos,
+                        isUploading      = state.isUploadingPhoto,
+                        photoError       = state.photoError,
+                        deletingPhotoId  = state.deletingPhotoId,
+                        onAddPhoto       = {
                             photoPicker.launch(
                                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
                         },
-                        onClearError    = viewModel::clearPhotoError
+                        onDeletePhoto    = viewModel::deletePhoto,
+                        onClearError     = viewModel::clearPhotoError
                     )
                 }
             }
@@ -177,7 +181,9 @@ private fun PhotosSection(
     photos: List<ReportPhoto>,
     isUploading: Boolean,
     photoError: String?,
+    deletingPhotoId: String?,
     onAddPhoto: () -> Unit,
+    onDeletePhoto: (String) -> Unit,
     onClearError: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -226,15 +232,53 @@ private fun PhotosSection(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 photos.forEach { photo ->
-                    AsyncImage(
-                        model = "$BASE_URL${photo.url}",
-                        contentDescription = "Foto del reporte",
+                    Box(
                         modifier = Modifier
                             .width(160.dp)
                             .height(120.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
+                    ) {
+                        val isDeleting = deletingPhotoId == photo.id
+                        AsyncImage(
+                            model = "$BASE_URL${photo.url}",
+                            contentDescription = "Foto del reporte",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop,
+                            alpha = if (isDeleting) 0.4f else 1f
+                        )
+                        if (isDeleting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp).align(Alignment.Center),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            // Botón eliminar (esquina superior derecha)
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .padding(4.dp)
+                                    .size(24.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.errorContainer,
+                                        shape = RoundedCornerShape(50)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                IconButton(
+                                    onClick = { onDeletePhoto(photo.id) },
+                                    modifier = Modifier.size(24.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "Eliminar foto",
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -13,6 +13,8 @@ import java.io.File
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
+
+
 class PhotoService(
     private val reportRepository: ReportRepository,
     private val photoRepository: ReportPhotoRepository,
@@ -75,5 +77,28 @@ class PhotoService(
             uploadedAt = photo.uploadedAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
             aiApproved = true
         )
+    }
+
+    suspend fun deletePhoto(
+        reportId: String,
+        photoId: String,
+        requesterId: String,
+        requesterRole: String
+    ) {
+        val report = reportRepository.findById(reportId)
+            ?: throw NotFoundException("Reporte $reportId no encontrado")
+        if (requesterRole != UserRole.ADMIN && report.citizenId != requesterId)
+            throw UnauthorizedException("No tenés permiso para eliminar fotos de este reporte")
+
+        val photo = photoRepository.findById(photoId)
+            ?: throw NotFoundException("Foto $photoId no encontrada")
+        if (photo.reportId != reportId)
+            throw BadRequestException("La foto no pertenece a este reporte")
+
+        // Eliminar archivo físico (silencioso si ya no existe)
+        val fileName = photo.url.removePrefix("/uploads/")
+        File(uploadDir, fileName).delete()
+
+        photoRepository.deleteById(photoId)
     }
 }

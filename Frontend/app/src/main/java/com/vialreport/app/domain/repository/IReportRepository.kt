@@ -36,4 +36,6 @@ interface IReportRepository {
     suspend fun delete(id: String): Boolean
 
     suspend fun uploadPhoto(reportId: String, imageBytes: ByteArray, mimeType: String): ReportPhoto
+
+    suspend fun deletePhoto(reportId: String, photoId: String)
 }

@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,6 +64,7 @@ fun ReportListScreen(
     onLogout: () -> Unit,
     onMapClick: () -> Unit,
     onStatsClick: () -> Unit,
+    onProfileClick: () -> Unit,
     shouldRefresh: Boolean,
     userName: String? = null,
     isAdmin: Boolean = false,
@@ -96,6 +98,9 @@ fun ReportListScreen(
                         IconButton(onClick = onStatsClick) {
                             Icon(Icons.Default.BarChart, contentDescription = "Estadísticas")
                         }
+                    }
+                    IconButton(onClick = onProfileClick) {
+                        Icon(Icons.Default.Person, contentDescription = "Mi perfil")
                     }
                     IconButton(onClick = onLogout) {
                         Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Cerrar sesión")

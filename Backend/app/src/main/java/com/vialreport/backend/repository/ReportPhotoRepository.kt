@@ -3,6 +3,7 @@ package com.vialreport.backend.repository
 import com.mongodb.client.model.Filters
 import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import com.vialreport.backend.model.ReportPhoto
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.toList
 import org.bson.Document
 import org.bson.types.ObjectId
@@ -29,6 +30,16 @@ class ReportPhotoRepository(db: MongoDatabase) {
 
     suspend fun findByReport(reportId: String): List<ReportPhoto> =
         col.find(Filters.eq("reportId", reportId)).toList().map { docToPhoto(it) }
+
+    suspend fun findById(photoId: String): ReportPhoto? {
+        if (!ObjectId.isValid(photoId)) return null
+        return col.find(Filters.eq("_id", ObjectId(photoId))).firstOrNull()?.let { docToPhoto(it) }
+    }
+
+    suspend fun deleteById(photoId: String): Boolean {
+        if (!ObjectId.isValid(photoId)) return false
+        return col.deleteOne(Filters.eq("_id", ObjectId(photoId))).deletedCount > 0
+    }
 
     suspend fun create(reportId: String, url: String): ReportPhoto {
         val photo = ReportPhoto(reportId = reportId, url = url)

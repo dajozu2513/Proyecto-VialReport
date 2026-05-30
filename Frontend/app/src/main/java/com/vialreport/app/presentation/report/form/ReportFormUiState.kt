@@ -18,6 +18,9 @@ data class ReportFormUiState(
     val locationStatus: LocationStatus = LocationStatus.IDLE,
     val locationError: String? = null,
     val incidentTypes: List<IncidentType> = emptyList(),
+    // Foto pendiente (solo en modo creación)
+    val hasPendingPhoto: Boolean = false,
+    val isUploadingPhoto: Boolean = false,
     val canSave: Boolean = false,
     val error: String? = null
 ) {

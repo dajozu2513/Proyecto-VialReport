@@ -52,4 +52,10 @@ interface ReportApi {
         @Path("id") id: String,
         @Part photo: MultipartBody.Part
     ): ApiResponseDto<PhotoDto>
+
+    @DELETE("reports/{id}/photos/{photoId}")
+    suspend fun deletePhoto(
+        @Path("id") reportId: String,
+        @Path("photoId") photoId: String
+    ): ApiResponseDto<Unit>
 }

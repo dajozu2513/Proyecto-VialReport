@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vialreport.app.data.local.TokenStore
+import com.vialreport.app.domain.usecase.report.DeletePhotoUseCase
 import com.vialreport.app.domain.usecase.report.GetReportByIdUseCase
 import com.vialreport.app.domain.usecase.report.UpdateStatusUseCase
 import com.vialreport.app.domain.usecase.report.UploadPhotoUseCase
@@ -18,6 +19,7 @@ import javax.inject.Inject
 class ReportDetailViewModel @Inject constructor(
     private val getReportByIdUseCase: GetReportByIdUseCase,
     private val uploadPhotoUseCase: UploadPhotoUseCase,
+    private val deletePhotoUseCase: DeletePhotoUseCase,
     private val updateStatusUseCase: UpdateStatusUseCase,
     private val tokenStore: TokenStore,
     savedStateHandle: SavedStateHandle
@@ -71,6 +73,20 @@ class ReportDetailViewModel @Inject constructor(
                 }
                 .onFailure { e ->
                     _uiState.update { it.copy(isChangingStatus = false, statusError = e.message ?: "Error al cambiar estado") }
+                }
+        }
+    }
+
+    fun deletePhoto(photoId: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(deletingPhotoId = photoId, photoError = null) }
+            runCatching { deletePhotoUseCase(reportId, photoId) }
+                .onSuccess {
+                    _uiState.update { it.copy(deletingPhotoId = null) }
+                    loadReport()
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(deletingPhotoId = null, photoError = e.message ?: "Error al eliminar foto") }
                 }
         }
     }

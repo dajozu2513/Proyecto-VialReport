@@ -3,6 +3,8 @@ package com.vialreport.backend.routes
 import com.vialreport.backend.dto.ApiResponse
 import com.vialreport.backend.dto.LoginRequest
 import com.vialreport.backend.dto.RegisterRequest
+import com.vialreport.backend.dto.UpdateProfileRequest
+import com.vialreport.backend.util.BadRequestException
 import com.vialreport.backend.repository.UserRepository
 import com.vialreport.backend.service.AuthService
 import com.vialreport.backend.util.ConflictException
@@ -59,6 +61,25 @@ fun Route.authRoutes(authService: AuthService, userRepository: UserRepository) {
                         ?: throw NotFoundException("Usuario no encontrado")
                     call.respond(HttpStatusCode.OK,
                         ApiResponse(success = true, message = "OK", data = user.toResponse()))
+                } catch (e: NotFoundException) {
+                    call.respond(HttpStatusCode.NotFound,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado"))
+                }
+            }
+
+            put("/me") {
+                try {
+                    val principal = call.principal<JWTPrincipal>()!!
+                    val userId    = principal.getClaim("userId", String::class)!!
+                    val request   = call.receive<UpdateProfileRequest>()
+                    if (request.name.isBlank()) throw BadRequestException("El nombre no puede estar vacío")
+                    val user = userRepository.update(userId, request.name.trim(), request.phone?.trim())
+                        ?: throw NotFoundException("Usuario no encontrado")
+                    call.respond(HttpStatusCode.OK,
+                        ApiResponse(success = true, message = "Perfil actualizado", data = user.toResponse()))
+                } catch (e: BadRequestException) {
+                    call.respond(HttpStatusCode.BadRequest,
+                        ApiResponse<Unit>(success = false, message = e.message ?: "Solicitud inválida"))
                 } catch (e: NotFoundException) {
                     call.respond(HttpStatusCode.NotFound,
                         ApiResponse<Unit>(success = false, message = e.message ?: "No encontrado"))
