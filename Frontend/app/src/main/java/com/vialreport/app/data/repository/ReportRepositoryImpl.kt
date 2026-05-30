@@ -11,6 +11,8 @@ import com.vialreport.app.domain.repository.IReportRepository
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import retrofit2.HttpException
 import javax.inject.Inject
 
 class ReportRepositoryImpl @Inject constructor(
@@ -65,8 +67,19 @@ class ReportRepositoryImpl @Inject constructor(
         val ext = when (mimeType) { "image/png" -> "png"; "image/webp" -> "webp"; else -> "jpg" }
         val body = imageBytes.toRequestBody(mimeType.toMediaType())
         val part = MultipartBody.Part.createFormData("photo", "photo.$ext", body)
-        val data = api.uploadPhoto(reportId, part).data ?: error("Error al subir foto")
-        return ReportPhoto(data.id, data.url, data.uploadedAt)
+        return try {
+            val data = api.uploadPhoto(reportId, part).data ?: error("Error al subir foto")
+            ReportPhoto(data.id, data.url, data.uploadedAt)
+        } catch (e: HttpException) {
+            // Parsea el cuerpo JSON del error para mostrar el mensaje real del backend
+            val backendMessage = try {
+                val json = e.response()?.errorBody()?.string() ?: ""
+                JSONObject(json).getString("message")
+            } catch (_: Exception) {
+                "Error al subir la foto (${e.code()})"
+            }
+            throw Exception(backendMessage)
+        }
     }
 
     override suspend fun deletePhoto(reportId: String, photoId: String) {
