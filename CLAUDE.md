@@ -25,7 +25,7 @@ Both projects manage dependencies via version catalogs in `gradle/libs.versions.
 Build APK from Android Studio: **Build → Build Bundle(s) / APK(s) → Build APK(s)**
 Output: `Frontend/app/build/outputs/apk/debug/app-debug.apk`
 
-No `gradlew` in Frontend — always build from Android Studio or use Android Studio's terminal.
+No `gradlew` in Frontend — always build from Android Studio.
 
 ### Backend (Ktor)
 
@@ -43,109 +43,116 @@ $env:JWT_AUDIENCE = "vialreport-users"
 .\gradlew :app:run
 ```
 
-Backend reads all config from environment variables: `MONGODB_URI`, `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`, `GEMINI_API_KEY` (optional), `UPLOAD_DIR` (default `./uploads`), `PORT` (default 8080).
+Backend reads all config from env vars: `MONGODB_URI`, `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`, `GEMINI_API_KEY` (get from aistudio.google.com), `UPLOAD_DIR` (default `./uploads`), `PORT` (default 8080).
 
 **Backend deployed at**: `https://proyecto-vialreport-8it4.onrender.com/`
 **GitHub**: `https://github.com/dajozu2513/Proyecto-VialReport.git`
 
 ---
 
-## Current App State (what works)
+## What Works (fully implemented)
 
-- ✅ Login / Register / Logout with JWT auth
-- ✅ Report list (citizen sees own, admin sees all) with search + status filters
-- ✅ Create / Edit / Delete reports
-- ✅ Photo upload with Gemini AI validation
-- ✅ Admin can change report status from detail screen
-- ✅ TopAppBar shows "VialReport" + "Hola, [name]" subtitle
+- ✅ Login / Register (with optional phone) / Logout with JWT auth
+- ✅ Report list — citizen sees own, admin sees all; search + status filter chips
+- ✅ Create / Edit / Delete reports with GPS location (FusedLocationProviderClient + Geocoder reverse-geocoding for address auto-fill)
+- ✅ Photo upload during report creation (picker in form, uploaded after save)
+- ✅ Photo upload in detail screen + **delete photo** (X button overlay per photo)
+- ✅ Gemini AI photo validation (rejects cartoons/memes; fail-closed on API errors)
+- ✅ Admin: change report status from detail screen
+- ✅ Admin: stats panel (`AdminStatsScreen` — summary cards + breakdown bars)
+- ✅ Status change history shown in detail screen (`StatusHistorySection`)
+- ✅ Map screen (`MapScreen` — osmdroid, colored circle markers by status, tap for detail)
+- ✅ Profile editing (`EditProfileScreen` — name + phone; updates TokenStore.userName)
+- ✅ TopAppBar: "VialReport" + "Hola, [name]"; icons: Map 🗺️, Stats 📊 (admin only), Profile 👤, Logout
 - ✅ Firebase App Distribution set up (project: VialReport, package: com.vialreport.app)
 
-## Pending Features (priority order)
+## Pending
 
-1. **Map screen** — backend has `GET /map/points` and `GET /map/heatmap` ready
-2. **Push notifications** — backend has `NotificationService` + notifications collection; needs FCM
-3. **Admin stats panel** — backend has `GET /admin/stats` ready
-4. **Crew management** — backend has `CrewRoutes` + `CrewService` complete
-5. **Status change history** — backend already returns `statusLog` in report response; just needs UI
-6. ~~**Phone number on register**~~ ✅ Done
-5. ~~**Status change history**~~ ✅ Done
-3. ~~**Admin stats panel**~~ ✅ Done
-1. ~~**Map screen**~~ ✅ Done — `MapScreen` (osmdroid, círculos por estado), `GET /map/reports`
-
-Remaining:
-- **Push notifications** — backend `NotificationService` listo; necesita FCM en Android
-- **Crew management** — backend `CrewRoutes` + `CrewService` completo; falta UI
+- **Push notifications** — backend `NotificationService` + `notifications` collection ready; needs FCM integration in Android
+- **Crew management** — backend `CrewRoutes` + `CrewService` complete; needs frontend UI
 
 ---
 
 ## Frontend Architecture
 
-Clean Architecture with MVVM under `app/src/main/java/com/vialreport/app/`:
+Clean Architecture + MVVM under `app/src/main/java/com/vialreport/app/`:
 
-- **`core/`** — Hilt app entry point (`VialReportApp`), DI modules (`NetworkModule`, `RepositoryModule`), `AuthInterceptor`
-- **`data/local/`** — `TokenStore`: **primary auth state**; SharedPreferences (`vialreport_prefs`) storing `jwt_token`, `user_role`, `user_name`; exposes `isAdmin: Boolean` and `clear()`. (`TokenManager` is a legacy duplicate that only handles the token — use `TokenStore` everywhere.)
-- **`data/remote/api/`** — `ReportApi`, `AuthApi`
-- **`data/remote/dto/`** — `ApiResponseDto<T>`, `ReportDto` (includes `PhotoDto` list), `AuthDto`, `ReportRequestDto`, `UpdateStatusRequestDto`, `PhotoDto`
-- **`data/remote/mapper/`** — `ReportMapper` (DTO → domain, maps nested photos)
-- **`data/repository/`** — `ReportRepositoryImpl`, `AuthRepositoryImpl`
-- **`domain/model/`** — `Report` (includes `photos: List<ReportPhoto>`), `ReportPhoto`, `IncidentType`, `User`
-- **`domain/repository/`** — `IReportRepository`, `IAuthRepository`
-- **`domain/usecase/auth/`** — `LoginUseCase` (returns `Result<User>`), `RegisterUseCase`, `IsLoggedInUseCase`, `LogoutUseCase`
-- **`domain/usecase/report/`** — `GetAllReportsUseCase`, `GetReportByIdUseCase`, `CreateReportUseCase`, `UpdateReportUseCase` (citizen edits fields via `PUT /reports/{id}`), `UpdateStatusUseCase` (admin via `PUT /reports/{id}/status`), `DeleteReportUseCase`, `GetIncidentTypesUseCase`, `UploadPhotoUseCase`
-- **`presentation/auth/login/`** — `LoginScreen`, `LoginViewModel`, `LoginUiState` (sealed: Idle/Loading/Success/Error). HTTP 401 shows "Correo o contraseña incorrectos"
-- **`presentation/auth/register/`** — `RegisterScreen`, `RegisterViewModel`, `RegisterUiState`
-- **`presentation/report/list/`** — list with search + status filter chips; TopAppBar shows name
-- **`presentation/report/detail/`** — photos (horizontal scroll + upload), admin status change section
-- **`presentation/report/form/`** — create/edit form with incident type dropdown from backend
-- **`presentation/report/util/ReportDisplayUtils`** — pure display helpers: `statusLabel/Color()`, `typeLabel()`, `priorityLabel/Color()`; maps backend string values to Spanish UI labels and Material colors
-- **`presentation/navigation/`** — `AppNavGraph` (takes `TokenStore`), `Routes`
+### Core / DI
+- `core/app/VialReportApp` — `@HiltAndroidApp`; initializes osmdroid tile cache
+- `core/di/NetworkModule` — `OkHttpClient` (AuthInterceptor + logging), `Retrofit` (base URL: Render), provides `ReportApi`, `AuthApi`, `AdminApi`, `MapApi`
+- `core/di/RepositoryModule` — binds `IReportRepository → ReportRepositoryImpl`, `IAuthRepository → AuthRepositoryImpl`
+- `core/interceptor/AuthInterceptor` — injects `Authorization: Bearer <token>` using `TokenStore`
 
-**Auth flow**: Start → LOGIN if no token, LIST if token exists. After login/register: token + role + userName saved to `TokenStore`. `AuthInterceptor` injects `Authorization: Bearer <token>` on every request.
+### Data layer
+- `data/local/TokenStore` — **primary auth state**; SharedPreferences (`vialreport_prefs`) storing `jwt_token`, `user_role`, `user_name`; exposes `isAdmin: Boolean` and `clear()`. (`TokenManager` is a legacy duplicate — ignore it, use `TokenStore` everywhere.)
+- `data/remote/api/` — `ReportApi`, `AuthApi` (login, register, `GET /auth/me`, `PUT /auth/me`), `AdminApi` (`GET /admin/stats`), `MapApi` (`GET /map/reports`)
+- `data/remote/dto/` — `ApiResponseDto<T>`, `ReportDto` (includes `StatusLogDto` list + `PhotoDto` list), `AuthDto` (includes `UpdateProfileRequestDto`, `UserDto` with phone), `AdminStatsDto`, `MapPointDto`, `StatusLogDto`
+- `data/remote/mapper/ReportMapper` — DTO → domain; maps photos + statusLog
+- `data/repository/` — `ReportRepositoryImpl` (includes `uploadPhoto`, `deletePhoto`), `AuthRepositoryImpl`
 
-**List refresh**: Uses `savedStateHandle["refresh_list"]` — set to `true` after form save or admin status change, triggers `loadReports()`.
+### Domain layer
+- `domain/model/` — `Report` (photos + statusLog), `ReportPhoto`, `StatusLogEntry`, `IncidentType`, `User`
+- `domain/repository/` — `IReportRepository` (includes `deletePhoto`), `IAuthRepository`
+- `domain/usecase/auth/` — `LoginUseCase`, `RegisterUseCase` (phone param), `IsLoggedInUseCase`, `LogoutUseCase`, `UpdateProfileUseCase` (calls `PUT /auth/me`, updates `TokenStore.userName`)
+- `domain/usecase/report/` — `GetAllReportsUseCase`, `GetReportByIdUseCase`, `CreateReportUseCase`, `UpdateReportUseCase`, `UpdateStatusUseCase`, `DeleteReportUseCase`, `GetIncidentTypesUseCase`, `UploadPhotoUseCase`, `DeletePhotoUseCase`
+- `domain/usecase/admin/GetAdminStatsUseCase` — injects `AdminApi` directly
+- `domain/usecase/map/GetMapPointsUseCase` — injects `MapApi` directly
 
-**Roles**:
-- `citizen` — default on register; own reports only
-- `admin` — all reports + status change; set in MongoDB Atlas → users collection → change `"role": "admin"` → user must re-login
-- `crew_member` — defined but no frontend yet
+### Presentation layer
+- `presentation/auth/login/` — `LoginScreen`, `LoginViewModel`, `LoginUiState` (sealed: Idle/Loading/Success/Error)
+- `presentation/auth/register/` — `RegisterScreen` (name, email, password, phone optional), `RegisterViewModel`, `RegisterUiState`
+- `presentation/report/list/` — `ReportListScreen` (search + status filters; TopAppBar with Map/Stats/Profile/Logout icons), `ReportListViewModel`
+- `presentation/report/detail/` — `ReportDetailScreen` (photos with X-delete per photo, status change for admin, `StatusHistorySection`), `ReportDetailViewModel`, `ReportDetailUiState` (includes `deletingPhotoId`)
+- `presentation/report/form/` — `ReportFormScreen` (GPS location section with permission flow + Geocoder, photo picker with preview), `ReportFormViewModel` (saves report then uploads pending photo), `ReportFormUiState` (includes `LocationStatus` enum, `latitude/longitude: Double?`, `hasPendingPhoto`)
+- `presentation/report/util/ReportDisplayUtils` — `statusLabel/Color()`, `typeLabel()`, `priorityLabel/Color()`
+- `presentation/admin/` — `AdminStatsScreen`, `AdminStatsViewModel`, `AdminStatsUiState`
+- `presentation/map/` — `MapScreen` (OSMDroid `AndroidView`, colored circle markers, bottom sheet on tap), `MapViewModel`, `MapUiState`
+- `presentation/profile/` — `EditProfileScreen` (name + phone editable, email read-only), `EditProfileViewModel` (loads via `GET /auth/me`), `EditProfileUiState`
+- `presentation/navigation/` — `AppNavGraph` (takes `TokenStore`); `Routes`: LOGIN, REGISTER, LIST, DETAIL, FORM, MAP, STATS, PROFILE
 
-**Photos**: Uploaded as multipart to `POST /reports/{id}/photos`. Gemini validates image is a real road incident. Displayed with Coil. Render storage is ephemeral (lost on redeploy).
-
-**DI**: Hilt. `RepositoryModule` binds `IReportRepository` → `ReportRepositoryImpl` and `IAuthRepository` → `AuthRepositoryImpl`.
+### Key patterns
+- **Auth flow**: Start → LOGIN if no token, LIST if token exists
+- **List refresh**: `savedStateHandle["refresh_list"] = true` after form save or status change
+- **Location**: `FusedLocationProviderClient.getCurrentLocation()` in Screen coroutine scope; result passed to ViewModel via `onLocationObtained(lat, lng)`; Geocoder tries to auto-fill address
+- **Photo during creation**: bytes stored in ViewModel field (`pendingPhotoBytes`); uploaded after `createReportUseCase` returns the new report ID
+- **Roles**: `citizen` (default), `admin` (set in MongoDB Atlas → re-login required), `crew_member` (no frontend yet)
+- **Permissions**: `INTERNET`, `READ_MEDIA_IMAGES`, `READ_EXTERNAL_STORAGE` (≤API32), `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`
 
 ---
 
 ## Backend Architecture
 
-Service-oriented with Repository pattern under `app/src/main/java/com/vialreport/backend/`:
+Service-oriented + Repository pattern under `app/src/main/java/com/vialreport/backend/`:
 
-`Application.kt` wires everything manually: `DatabaseFactory.init()` → repositories → services → `Routing`. No DI framework; all dependencies constructed inline.
+`Application.kt` wires everything manually (no DI): `DatabaseFactory.init()` → repositories → services → `Routing`.
 
 - **`config/`** — `Database.kt` (MongoDB Atlas; seeds 8 `IncidentType` docs on first run), `Security.kt` (JWT)
-- **`model/`** — `Report`, `User`, `Crew`, `IncidentType`, `Notification`, `ReportPhoto`, `ReportStatusLog`
-- **`dto/`** — Request/response payloads; `ApiResponse<T>` generic wrapper
-- **`repository/`** — MongoDB coroutine driver (no ORM): `ReportRepository`, `UserRepository`, `IncidentTypeRepository`, `CrewRepository`, `ReportPhotoRepository`, `ReportStatusLogRepository`, `NotificationRepository`
-- **`service/`** — `ReportService`, `AuthService`, `PhotoService`, `PhotoAiService` (Gemini 1.5 Flash), `NotificationService`, `CrewService`, `MapService`, `AdminService`
-- **`routes/`** — `ReportRoutes`, `AuthRoutes`, `CrewRoutes`, `NotificationRoutes`, `IncidentTypeRoutes`, `MapRoutes`, `AdminRoutes`
-- **`util/`** — `Exceptions` (`NotFoundException`, `BadRequestException`, `UnauthorizedException`); `UserRole`, `ReportStatus` (with `isValid()` / `requiresAdmin()` helpers), `ReportPriority`
+- **`model/`** — `Report` (has `citizenId`), `User` (has `phone`, `cedula`, `isVerified`), `Crew`, `IncidentType`, `Notification`, `ReportPhoto`, `ReportStatusLog`
+- **`dto/ApiResponse.kt`** — `ApiResponse<T>`, `LoginRequest`, `RegisterRequest`, `AuthResponse`, `UserResponse`, `UpdateProfileRequest`
+- **`repository/`** — MongoDB coroutine driver; `ReportPhotoRepository` has `findById()` + `deleteById()`
+- **`service/`** — `PhotoService` (has `deletePhoto()` — deletes DB record + physical file), `PhotoAiService` (Gemini 1.5 Flash; fail-closed on API errors; ERROR log if key missing), others unchanged
+- **`routes/`** — all routes; `ReportRoutes` has `DELETE /reports/{id}/photos/{photoId}`; `AuthRoutes` has `PUT /auth/me`
 
-**Key REST endpoints**:
+### All REST endpoints
 ```
 POST   /auth/register
 POST   /auth/login
+GET    /auth/me                       — authenticated
+PUT    /auth/me                       — body: {name, phone?}
 GET    /incident-types                — public
 GET    /reports                       — citizen: own; admin: all (?status=&typeId=&zone=)
-GET    /reports/{id}
-POST   /reports                       — citizen; body: {typeId, title, description, latitude, longitude, address}
-PUT    /reports/{id}                  — citizen edits own; admin edits any
+GET    /reports/{id}                  — returns statusLog[] + photos[]
+POST   /reports
+PUT    /reports/{id}
 PUT    /reports/{id}/status           — admin only; body: {status, note?}
 DELETE /reports/{id}
 POST   /reports/{id}/photos           — multipart, Gemini-validated
 GET    /reports/{id}/photos           — admin only
+DELETE /reports/{id}/photos/{photoId} — owner or admin
 GET    /uploads/{filename}            — static files
-GET    /map/points                    — map markers
-GET    /map/heatmap                   — heatmap data
-GET    /admin/stats                   — admin statistics
+GET    /map/reports                   — map markers (public, no auth required)
+GET    /map/heatmap
+GET    /admin/stats                   — admin only
 GET    /notifications                 — user notifications
 ```
 
@@ -161,6 +168,8 @@ GET    /notifications                 — user notifications
 | HTTP client | Retrofit + OkHttp | 2.11.0 / 4.12.0 |
 | Image loading | Coil | 2.7.0 |
 | Navigation | Jetpack Navigation | 2.9.3 |
+| Map | OSMDroid | 6.1.20 |
+| Location | play-services-location | 21.3.0 |
 | Backend framework | Ktor | 2.3.7 |
 | Database | MongoDB Atlas (Kotlin coroutine driver) | — |
 | Auth | Auth0 JWT | 4.4.0 |
