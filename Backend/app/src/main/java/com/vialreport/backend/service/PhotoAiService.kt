@@ -38,17 +38,20 @@ class PhotoAiService(private val apiKey: String) {
         val prompt = """
             You are a photo validator for a road incident reporting app.
 
-            Answer YES if the image is a real photograph (not a cartoon or drawing) AND shows ANY of:
-            roads, streets, sidewalks, potholes, flooding, garbage on street, broken signs,
-            broken traffic lights, landslides, cracks in pavement, or broken streetlights.
-            Accept photos taken at night, from a car window, or with imperfect framing.
+            Step 1 — Is it a real photograph?
+            If the image is a cartoon, anime, drawing, illustration, meme, AI-generated art,
+            screenshot of an app, or any non-photographic content → answer NO immediately.
 
-            Answer NO only if the image is:
-            - A cartoon, illustration, meme, drawing, or AI-generated image
-            - Clearly obscene or contains nudity/graphic violence
-            - Clearly unrelated (food, selfie, animal, indoor scene with no street visible)
+            Step 2 — Does it show something related to roads or public infrastructure?
+            Real photos of any outdoor public scene are acceptable: roads, streets, sidewalks,
+            drainage, streetlights, traffic signs, traffic lights, garbage on street, potholes,
+            flooding, landslides, pavement cracks, construction zones.
+            Be lenient: accept night photos, car-window shots, partial views, and imperfect framing.
 
-            Reply with a single word: YES or NO.
+            Answer NO if the photo clearly shows only: food, people indoors, selfies, animals,
+            private property with no public road visible, or explicit/violent content.
+
+            Reply with a single word only: YES or NO. No explanation.
         """.trimIndent()
 
         val requestBody = GeminiRequest(
@@ -75,12 +78,11 @@ class PhotoAiService(private val apiKey: String) {
 
             log.info("Gemini raw response: '$raw'")
 
-            // Acepta si la respuesta contiene YES en cualquier parte
-            // Rechaza solo si contiene NO de forma explícita y sin YES
+            // startsWith: robusto ante texto extra que Gemini añada tras la palabra
             val accepted = when {
-                raw.contains("YES") -> { log.info("Gemini: ACEPTADA");  true  }
-                raw.contains("NO")  -> { log.warn("Gemini: RECHAZADA"); false }
-                else                -> { log.warn("Gemini: respuesta ambigua '$raw' — aceptando"); true }
+                raw.startsWith("YES") -> { log.info("Gemini: ACEPTADA");                               true  }
+                raw.startsWith("NO")  -> { log.warn("Gemini: RECHAZADA (respuesta: '$raw')");          false }
+                else                  -> { log.warn("Gemini: respuesta ambigua '$raw' — aceptando");   true  }
             }
             accepted
         } catch (e: Exception) {
