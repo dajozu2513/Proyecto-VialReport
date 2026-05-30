@@ -36,28 +36,19 @@ class PhotoAiService(private val apiKey: String) {
         val b64 = Base64.getEncoder().encodeToString(imageBytes)
 
         val prompt = """
-            You are a content moderator for a road incident reporting app (VialReport, Costa Rica).
+            You are a photo validator for a road incident reporting app.
 
-            VALID INCIDENT TYPES:
-            - Flooded road or street (Inundación)
-            - Broken or missing streetlight (Alumbrado público)
-            - Garbage pile or illegal dumping on public road (Basura acumulada)
-            - Pothole on road or sidewalk (Bache)
-            - Damaged or missing road sign (Señal dañada)
-            - Broken traffic light (Semáforo dañado)
-            - Landslide blocking a road (Derrumbe)
-            - Crack in sidewalk or pavement (Grieta en acera)
+            Answer YES if the image is a real photograph (not a cartoon or drawing) AND shows ANY of:
+            roads, streets, sidewalks, potholes, flooding, garbage on street, broken signs,
+            broken traffic lights, landslides, cracks in pavement, or broken streetlights.
+            Accept photos taken at night, from a car window, or with imperfect framing.
 
-            Respond with ONLY ONE of these codes — nothing else:
-            YES          → Real photo showing any of the valid incident types (even partially, from a distance, or with imperfect framing).
-            NO_NOT_PHOTO → Cartoon, illustration, meme, anime, drawing, screenshot, AI art, or any non-photographic image.
-            NO_OBSCENE   → Contains nudity, sexual content, graphic violence, or offensive material.
-            NO_UNRELATED → Real photo but clearly shows something unrelated (food, selfie, pet, indoor scene, etc.).
-            NO_UNCLEAR   → Completely black, fully blurred, or impossible to identify any content.
+            Answer NO only if the image is:
+            - A cartoon, illustration, meme, drawing, or AI-generated image
+            - Clearly obscene or contains nudity/graphic violence
+            - Clearly unrelated (food, selfie, animal, indoor scene with no street visible)
 
-            Be LENIENT with real photos: accept images taken from a car, at night, at an angle, or with partial views, as long as the subject is plausibly a road incident.
-            Only reject if you are CERTAIN the image does not qualify.
-            Reply with ONLY the code word. No punctuation, no explanation.
+            Reply with a single word: YES or NO.
         """.trimIndent()
 
         val requestBody = GeminiRequest(
@@ -82,16 +73,14 @@ class PhotoAiService(private val apiKey: String) {
                 .firstOrNull()?.content?.parts?.firstOrNull()?.text
                 ?.trim()?.uppercase() ?: ""
 
-            // startsWith para tolerar texto extra que Gemini pueda añadir tras el código
+            log.info("Gemini raw response: '$raw'")
+
+            // Acepta si la respuesta contiene YES en cualquier parte
+            // Rechaza solo si contiene NO de forma explícita y sin YES
             val accepted = when {
-                raw.startsWith("YES")          -> { log.info("Gemini: ACEPTADA");                                              true  }
-                raw.startsWith("NO_NOT_PHOTO") -> { log.warn("Gemini: RECHAZADA — imagen no fotográfica o animada");           false }
-                raw.startsWith("NO_OBSCENE")   -> { log.warn("Gemini: RECHAZADA — contenido obsceno o inapropiado");           false }
-                raw.startsWith("NO_UNRELATED") -> { log.warn("Gemini: RECHAZADA — no corresponde a un incidente vial");        false }
-                raw.startsWith("NO_UNCLEAR")   -> { log.warn("Gemini: RECHAZADA — imagen irreconocible");                      false }
-                raw.startsWith("NO")           -> { log.warn("Gemini: RECHAZADA — respuesta genérica NO: '$raw'");             false }
-                raw.isEmpty()                  -> { log.warn("Gemini: respuesta vacía — rechazando por precaución");           false }
-                else                           -> { log.warn("Gemini: respuesta inesperada '$raw' — aceptando con cautela");   true  }
+                raw.contains("YES") -> { log.info("Gemini: ACEPTADA");  true  }
+                raw.contains("NO")  -> { log.warn("Gemini: RECHAZADA"); false }
+                else                -> { log.warn("Gemini: respuesta ambigua '$raw' — aceptando"); true }
             }
             accepted
         } catch (e: Exception) {
