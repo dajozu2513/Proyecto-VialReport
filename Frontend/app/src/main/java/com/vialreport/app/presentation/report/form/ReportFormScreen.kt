@@ -3,6 +3,7 @@ package com.vialreport.app.presentation.report.form
 import android.Manifest
 import android.content.pm.PackageManager
 import android.location.Geocoder
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest

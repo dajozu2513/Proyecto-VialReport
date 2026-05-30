@@ -1,45 +1,72 @@
 package com.vialreport.app.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-
-private val DarkColorScheme = darkColorScheme(
-    primary = Orange80,
-    secondary = OrangeGrey80,
-    tertiary = Amber80
-)
 
 private val LightColorScheme = lightColorScheme(
-    primary = Orange40,
-    secondary = OrangeGrey40,
-    tertiary = Amber40
+    primary              = JadeDark,
+    onPrimary            = SurfaceLight,
+    primaryContainer     = JadeTint,
+    onPrimaryContainer   = JadeDeep,
+
+    secondary            = JadeMid,
+    onSecondary          = SurfaceLight,
+    secondaryContainer   = JadeTint,
+    onSecondaryContainer = JadeDeep,
+
+    tertiary             = JadeMid,
+    onTertiary           = SurfaceLight,
+
+    background           = BgLight,
+    onBackground         = TextLight,
+
+    surface              = SurfaceLight,
+    onSurface            = TextLight,
+    onSurfaceVariant     = TextSecondary,
+
+    outline              = BorderLight,
+    outlineVariant       = BorderLight,
+)
+
+private val DarkColorScheme = darkColorScheme(
+    primary              = JadeMid,
+    onPrimary            = JadeDeep,
+    primaryContainer     = JadeDark,
+    onPrimaryContainer   = JadeTint,
+
+    secondary            = JadeMidDark,
+    onSecondary          = JadeDeep,
+    secondaryContainer   = JadeDark,
+    onSecondaryContainer = JadeTint,
+
+    tertiary             = JadeMidDark,
+    onTertiary           = JadeDeep,
+
+    background           = BgDark,
+    onBackground         = TextDark,
+
+    surface              = SurfaceDark,
+    onSurface            = TextDark,
+    onSurfaceVariant     = MutedDark,
+
+    outline              = BorderDark,
+    outlineVariant       = BorderDark,
 )
 
 @Composable
 fun VialReportTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,   // Desactivado: usamos siempre los tokens de diseño
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
-        content = content
+        typography  = Typography,
+        content     = content
     )
 }

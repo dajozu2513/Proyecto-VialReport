@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="#E65100" />
+    <!-- Sky blue matching the Noto Emoji motorway background -->
+    <solid android:color="#A1D1DA" />
 </shape>

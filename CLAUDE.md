@@ -36,14 +36,37 @@ Run from `Backend/`:
 
 Or manually:
 ```powershell
-$env:MONGODB_URI  = "mongodb+srv://dajozu2513:Terraria10@cluster0.iakfaa2.mongodb.net/vialreport?appName=Cluster0"
+$env:MONGODB_URI  = "mongodb+srv://..."
 $env:JWT_SECRET   = "cualquier-string-secreto-largo"
 $env:JWT_ISSUER   = "vialreport"
 $env:JWT_AUDIENCE = "vialreport-users"
 .\gradlew :app:run
 ```
 
+Build a fat JAR (used by Render/Docker):
+```powershell
+.\gradlew :app:shadowJar
+# Output: Backend/app/build/libs/app-all.jar
+```
+
+Build and run via Docker:
+```powershell
+docker build -t vialreport-backend .
+docker run -p 8080:8080 `
+  -e MONGODB_URI="..." -e JWT_SECRET="..." `
+  -e JWT_ISSUER="vialreport" -e JWT_AUDIENCE="vialreport-users" `
+  vialreport-backend
+```
+
 Backend reads all config from env vars: `MONGODB_URI`, `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`, `GEMINI_API_KEY` (get from aistudio.google.com), `UPLOAD_DIR` (default `./uploads`), `PORT` (default 8080).
+
+### API Testing
+
+`Backend/VialReport.postman_collection.json` — Postman collection covering all endpoints. Import into Postman and set a `baseUrl` variable (e.g. `http://localhost:8080` or the Render URL).
+
+### Tests
+
+Neither project has a configured test suite — only a placeholder `ExampleUnitTest` in the backend. There are no test commands to run.
 
 **Backend deployed at**: `https://proyecto-vialreport-8it4.onrender.com/`
 **GitHub**: `https://github.com/dajozu2513/Proyecto-VialReport.git`
@@ -57,14 +80,16 @@ Backend reads all config from env vars: `MONGODB_URI`, `JWT_SECRET`, `JWT_ISSUER
 - ✅ Create / Edit / Delete reports with GPS location (FusedLocationProviderClient + Geocoder reverse-geocoding for address auto-fill)
 - ✅ Photo upload during report creation (picker in form, uploaded after save)
 - ✅ Photo upload in detail screen + **delete photo** (X button overlay per photo)
-- ✅ Gemini AI photo validation (rejects cartoons/memes; fail-closed on API errors)
+- ✅ Gemini AI photo validation — strict: only real photos of the 8 declared incident types; returns coded rejection reasons (`NO_NOT_PHOTO`, `NO_OBSCENE`, `NO_UNRELATED`, `NO_UNCLEAR`); fail-closed on API errors
 - ✅ Admin: change report status from detail screen
 - ✅ Admin: stats panel (`AdminStatsScreen` — summary cards + breakdown bars)
 - ✅ Status change history shown in detail screen (`StatusHistorySection`)
 - ✅ Map screen (`MapScreen` — osmdroid, colored circle markers by status, tap for detail)
 - ✅ Profile editing (`EditProfileScreen` — name + phone; updates TokenStore.userName)
-- ✅ TopAppBar: "VialReport" + "Hola, [name]"; icons: Map 🗺️, Stats 📊 (admin only), Profile 👤, Logout
+- ✅ TopAppBar: "VialReport" + "Hola, [name]"; icons: Map 🗺️, Stats 📊 (admin only), Profile 👤, Logout; green primary background
 - ✅ Firebase App Distribution set up (project: VialReport, package: com.vialreport.app)
+- ✅ App icon: Noto Emoji 🛣️ motorway converted to adaptive vector drawable (`ic_launcher_foreground.xml` + `ic_launcher_background.xml`)
+- ✅ Design tokens applied — Jade dark palette (`#2D6A4F` primary, `#F1EFE8` bg, full dark mode); `dynamicColor = false` so system wallpaper never overrides the theme
 
 ## Pending
 
@@ -155,6 +180,23 @@ GET    /map/heatmap
 GET    /admin/stats                   — admin only
 GET    /notifications                 — user notifications
 ```
+
+---
+
+## Design System
+
+Tokens defined in `Frontend/app/src/main/java/com/vialreport/app/ui/theme/`:
+
+| Token | Light | Dark | Uso |
+|-------|-------|------|-----|
+| `primary` | `#2D6A4F` Jade oscuro | `#52A07A` | Botones, TopAppBar, FAB, chips seleccionados |
+| `primaryContainer` | `#D0EBE0` Jade tint | `#2D6A4F` | Fondo de contenedores |
+| `background` | `#F1EFE8` | `#1C1C1E` | Fondo de pantallas |
+| `surface` | `#FFFFFF` | `#2C2C2E` | Cards, diálogos |
+| `onSurfaceVariant` | `#5F5E5A` | `#B4B2A9` | Texto secundario |
+
+- `dynamicColor = false` en `VialReportTheme` — el tema siempre usa los tokens, nunca el color del fondo de pantalla del usuario.
+- Íconos de incidente: Inundación 🌊, Alumbrado público 💡, Basura acumulada 🗑️, Bache 🕳️, Señal dañada 🚧, Semáforo dañado 🚦, Derrumbe 🪨, Grieta en acera ⚠️
 
 ---
 

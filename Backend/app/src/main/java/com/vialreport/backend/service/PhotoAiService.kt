@@ -22,28 +22,54 @@ class PhotoAiService(private val apiKey: String) {
         }
     }
 
+    /**
+     * Valida que la imagen sea una fotografía real de un incidente vial registrado en VialReport.
+     * Retorna true = aceptada, false = rechazada.
+     * El motivo de rechazo queda registrado en el log.
+     */
     suspend fun isRoadIncident(imageBytes: ByteArray, mimeType: String): Boolean {
         if (apiKey.isBlank()) {
             log.error("GEMINI_API_KEY no configurado — validación de IA desactivada. Configura la variable en Render.")
-            return true  // sin clave: se acepta pero sin validación
+            return true  // sin clave: se acepta sin validación
         }
 
         val b64 = Base64.getEncoder().encodeToString(imageBytes)
+
+        val prompt = """
+            You are a strict content moderator for a road incident reporting app used in Costa Rica.
+
+            VALID INCIDENT TYPES (the only subjects allowed):
+            - Inundación (flooded road or street)
+            - Alumbrado público (broken or missing streetlight)
+            - Basura acumulada (illegal dumping or garbage pile on public road)
+            - Bache (pothole on road or sidewalk)
+            - Señal dañada (damaged or missing road sign)
+            - Semáforo dañado (broken or non-functional traffic light)
+            - Derrumbe (landslide blocking a road)
+            - Grieta en acera (crack in sidewalk or pavement)
+
+            EVALUATION RULES — respond with EXACTLY one of these codes:
+            • YES           → The image is a real photograph showing one of the valid incident types above.
+            • NO_NOT_PHOTO  → The image is a cartoon, illustration, drawing, anime, meme, screenshot, AI-generated art, CGI, or any non-photographic content.
+            • NO_OBSCENE    → The image contains nudity, sexual content, graphic violence, gore, or any offensive material.
+            • NO_UNRELATED  → The image is a real photo but does NOT show any of the valid incident types (e.g. people, food, animals, indoor scenes, vehicles without damage, etc.).
+            • NO_UNCLEAR    → The image is too blurry, dark, or cropped to identify its content.
+
+            STRICT RULES:
+            - A photo must show a real-world outdoor scene to be valid.
+            - Even if only partially visible, obscene content → NO_OBSCENE.
+            - Animated or illustrated images are NEVER valid, even if they depict road damage.
+            - When in doubt, respond NO_UNRELATED.
+
+            Respond with ONLY the code. No explanation.
+        """.trimIndent()
 
         val requestBody = GeminiRequest(
             contents = listOf(
                 GeminiContent(
                     parts = listOf(
                         GeminiPart(inlineData = InlineData(mimeType = mimeType, data = b64)),
-                        GeminiPart(text = """
-                            You are a road infrastructure incident validator.
-                            Analyze this image and answer YES only if ALL of the following are true:
-                            1. It is a REAL photograph (not a cartoon, illustration, meme, screenshot, anime, AI-generated art, or drawing).
-                            2. It clearly shows an actual road, street, sidewalk, or public infrastructure.
-                            3. It shows a visible problem such as: pothole, road damage, broken traffic sign, flooded road, fallen debris, damaged sidewalk, broken streetlight, cracked pavement, or similar infrastructure defect.
-                            If the image is a cartoon, meme, unrelated photo, or does not show infrastructure damage, reply NO.
-                            Reply with ONLY one word: YES or NO.
-                        """.trimIndent())
+                        GeminiPart(text = prompt)
                     )
                 )
             )
@@ -56,14 +82,39 @@ class PhotoAiService(private val apiKey: String) {
                 setBody(requestBody)
             }.body()
 
-            val answer = response.candidates
+            val code = response.candidates
                 .firstOrNull()?.content?.parts?.firstOrNull()?.text
-                ?.trim()?.uppercase() ?: "NO"
-            log.info("Gemini verdict: '$answer'")
-            answer.startsWith("YES")
+                ?.trim()?.uppercase() ?: "NO_UNCLEAR"
+
+            when {
+                code == "YES" -> {
+                    log.info("Gemini: imagen ACEPTADA")
+                    true
+                }
+                code == "NO_NOT_PHOTO" -> {
+                    log.warn("Gemini: RECHAZADA — contenido animado, ilustración o no fotográfico")
+                    false
+                }
+                code == "NO_OBSCENE" -> {
+                    log.warn("Gemini: RECHAZADA — contenido obsceno o inapropiado")
+                    false
+                }
+                code == "NO_UNRELATED" -> {
+                    log.warn("Gemini: RECHAZADA — imagen real pero no corresponde a un incidente vial")
+                    false
+                }
+                code == "NO_UNCLEAR" -> {
+                    log.warn("Gemini: RECHAZADA — imagen demasiado borrosa o sin contexto identificable")
+                    false
+                }
+                else -> {
+                    log.warn("Gemini: respuesta inesperada '$code' — rechazando por precaución")
+                    false
+                }
+            }
         } catch (e: Exception) {
-            log.error("Gemini API call failed: ${e.message} — rejecting image as precaution")
-            false  // fail-closed: si la API falla, rechaza la imagen
+            log.error("Gemini API falló: ${e.message} — rechazando imagen por precaución")
+            false  // fail-closed
         }
     }
 }
