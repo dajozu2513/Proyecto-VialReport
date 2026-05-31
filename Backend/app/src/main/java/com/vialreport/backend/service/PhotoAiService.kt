@@ -26,9 +26,8 @@ class PhotoAiService(private val apiKey: String) {
         }
     }
 
-    // Modelo confirmado como disponible con Google AI Studio keys gratuitas
-    private val MODEL = "gemini-1.5-flash"
-    private val ENDPOINT = "https://generativelanguage.googleapis.com/v1/models/$MODEL:generateContent"
+    private val MODEL    = "gemini-1.5-flash"
+    private val BASE_URL = "https://generativelanguage.googleapis.com"
 
     suspend fun validate(imageBytes: ByteArray, mimeType: String): ValidationResult {
         if (apiKey.isBlank()) {
@@ -67,9 +66,21 @@ class PhotoAiService(private val apiKey: String) {
             )
         )
 
+        // Detecta el tipo de clave para usar el método de auth correcto:
+        // - "AIza..." → query param ?key= (AI Studio clásico, v1beta)
+        // - Cualquier otro formato → Bearer token en header (OAuth2 / nuevo AI Studio, v1)
+        val isApiKey = apiKey.startsWith("AIza")
+        val (url, authHeader) = if (isApiKey) {
+            "$BASE_URL/v1beta/models/$MODEL:generateContent?key=$apiKey" to null
+        } else {
+            "$BASE_URL/v1/models/$MODEL:generateContent" to "Bearer $apiKey"
+        }
+        log.info("Gemini auth=${if (isApiKey) "APIKey/v1beta" else "Bearer/v1"} model=$MODEL")
+
         return try {
-            val httpResponse: HttpResponse = client.post("$ENDPOINT?key=$apiKey") {
+            val httpResponse: HttpResponse = client.post(url) {
                 contentType(ContentType.Application.Json)
+                if (authHeader != null) header(HttpHeaders.Authorization, authHeader)
                 setBody(requestBody)
             }
 
@@ -87,7 +98,7 @@ class PhotoAiService(private val apiKey: String) {
             val finishReason = candidate?.finishReason ?: "NO_CANDIDATES"
             val raw          = candidate?.content?.parts?.firstOrNull()?.text?.trim()?.uppercase() ?: ""
 
-            log.info("Gemini model=$MODEL raw='$raw' finishReason='$finishReason'")
+            log.info("Gemini raw='$raw' finishReason='$finishReason'")
 
             when {
                 raw.startsWith("YES") ->
