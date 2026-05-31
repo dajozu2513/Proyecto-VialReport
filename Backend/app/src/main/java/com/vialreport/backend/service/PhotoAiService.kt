@@ -28,7 +28,7 @@ class PhotoAiService(private val apiKey: String) {
 
     // Modelo confirmado como disponible con Google AI Studio keys gratuitas
     private val MODEL = "gemini-1.5-flash"
-    private val ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent"
+    private val ENDPOINT = "https://generativelanguage.googleapis.com/v1/models/$MODEL:generateContent"
 
     suspend fun validate(imageBytes: ByteArray, mimeType: String): ValidationResult {
         if (apiKey.isBlank()) {
