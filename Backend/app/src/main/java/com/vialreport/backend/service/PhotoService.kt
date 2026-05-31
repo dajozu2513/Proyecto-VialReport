@@ -59,8 +59,8 @@ class PhotoService(
         if (mimeType !in allowedMimeTypes) throw BadRequestException("Tipo de archivo no permitido. Use JPEG, PNG o WebP")
         if (bytes.size > 10 * 1024 * 1024) throw BadRequestException("La imagen no puede superar 10 MB")
 
-        val approved = photoAiService.isRoadIncident(bytes, mimeType)
-        if (!approved) throw BadRequestException("La imagen no parece mostrar un incidente vial real.")
+        val validation = photoAiService.validate(bytes, mimeType)
+        if (!validation.approved) throw BadRequestException(validation.reason)
 
         val ext = when (mimeType) { "image/png" -> "png"; "image/webp" -> "webp"; else -> "jpg" }
         val fileName = "${UUID.randomUUID()}.$ext"
