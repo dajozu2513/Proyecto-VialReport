@@ -5,6 +5,7 @@ import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.Serializable
@@ -67,12 +68,22 @@ class PhotoAiService(private val apiKey: String) {
         )
 
         return try {
-            val response: GeminiResponse = client.post("$ENDPOINT?key=$apiKey") {
+            val httpResponse: HttpResponse = client.post("$ENDPOINT?key=$apiKey") {
                 contentType(ContentType.Application.Json)
                 setBody(requestBody)
-            }.body()
+            }
 
-            val candidate   = response.candidates.firstOrNull()
+            // Captura el cuerpo como texto primero para poder loggearlo si hay error
+            val bodyText = httpResponse.bodyAsText()
+            log.info("Gemini HTTP ${httpResponse.status.value} — body preview: ${bodyText.take(300)}")
+
+            if (!httpResponse.status.isSuccess()) {
+                return ValidationResult(false, "Gemini HTTP ${httpResponse.status.value}: $bodyText")
+            }
+
+            val response = Json { ignoreUnknownKeys = true }.decodeFromString<GeminiResponse>(bodyText)
+
+            val candidate    = response.candidates.firstOrNull()
             val finishReason = candidate?.finishReason ?: "NO_CANDIDATES"
             val raw          = candidate?.content?.parts?.firstOrNull()?.text?.trim()?.uppercase() ?: ""
 
