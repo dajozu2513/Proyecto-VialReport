@@ -12,7 +12,7 @@ import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 import java.util.Base64
 
-/** Resultado de la validación: approved=true si se acepta, reason siempre disponible para logs/UI */
+/** Resultado de la validación de IA */
 data class ValidationResult(val approved: Boolean, val reason: String)
 
 class PhotoAiService(private val apiKey: String) {
@@ -25,27 +25,34 @@ class PhotoAiService(private val apiKey: String) {
         }
     }
 
+    // Modelo confirmado como disponible con Google AI Studio keys gratuitas
+    private val MODEL = "gemini-1.5-flash"
+    private val ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/$MODEL:generateContent"
+
     suspend fun validate(imageBytes: ByteArray, mimeType: String): ValidationResult {
         if (apiKey.isBlank()) {
-            log.warn("GEMINI_API_KEY no configurado — omitiendo validación de IA")
-            return ValidationResult(approved = true, reason = "Sin validación (API key no configurada)")
+            log.warn("GEMINI_API_KEY no configurado — validación omitida")
+            return ValidationResult(true, "Sin validación (API key no configurada)")
         }
 
         val b64 = Base64.getEncoder().encodeToString(imageBytes)
 
         val prompt = """
-            Look at this image and answer with exactly one word: YES or NO.
+            You are a content validator for a road incident reporting app.
+            Analyze the image and reply with ONLY the word YES or NO.
 
-            Answer NO if ANY of these is true:
-            - The image is a cartoon, anime, drawing, illustration, meme, clip art, CGI, painting, or any non-photographic content.
-            - The image contains nudity, sexual content, or graphic violence.
-            - The image is a real photo but shows ONLY: food, a selfie, an animal, or an indoor room with no street visible.
+            Reply YES if:
+            - The image is a real photograph (taken with a camera, not drawn or animated)
+            - AND it shows any outdoor public area related to roads or infrastructure:
+              streets, roads, sidewalks, potholes, flooding, garbage on street,
+              broken signs, broken traffic lights, landslides, cracks in pavement, streetlights.
 
-            Answer YES only if BOTH are true:
-            - It is a real photograph taken with a camera (not drawn or animated).
-            - It shows any outdoor public area: street, road, sidewalk, pothole, flooding, garbage pile, broken sign, traffic light, landslide, pavement crack, or streetlight.
+            Reply NO if:
+            - The image is a cartoon, anime, drawing, meme, illustration, or any non-photographic content
+            - OR it contains nudity, sexual content, or graphic violence
+            - OR it is a real photo showing only food, selfies, animals, or indoor scenes
 
-            Reply with a single word: YES or NO
+            Your entire response must be a single word: YES or NO
         """.trimIndent()
 
         val requestBody = GeminiRequest(
@@ -56,52 +63,50 @@ class PhotoAiService(private val apiKey: String) {
                         GeminiPart(text = prompt)
                     )
                 )
-            ),
-            generationConfig = GenerationConfig(maxOutputTokens = 5)
+            )
         )
 
         return try {
-            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=$apiKey"
-            val response: GeminiResponse = client.post(url) {
+            val response: GeminiResponse = client.post("$ENDPOINT?key=$apiKey") {
                 contentType(ContentType.Application.Json)
                 setBody(requestBody)
             }.body()
 
-            val candidate = response.candidates.firstOrNull()
-            val raw = candidate?.content?.parts?.firstOrNull()?.text?.trim()?.uppercase() ?: ""
-            val finishReason = candidate?.finishReason ?: "UNKNOWN"
+            val candidate   = response.candidates.firstOrNull()
+            val finishReason = candidate?.finishReason ?: "NO_CANDIDATES"
+            val raw          = candidate?.content?.parts?.firstOrNull()?.text?.trim()?.uppercase() ?: ""
 
-            log.info("Gemini raw='$raw' finishReason='$finishReason'")
+            log.info("Gemini model=$MODEL raw='$raw' finishReason='$finishReason'")
 
             when {
                 raw.startsWith("YES") ->
-                    ValidationResult(true,  "Aceptada por Gemini")
+                    ValidationResult(true,  "Aceptada")
+
                 raw.startsWith("NO") ->
-                    ValidationResult(false, "Gemini: imagen no válida (respuesta: $raw)")
+                    ValidationResult(false, "Foto rechazada: no es una fotografía real de un incidente vial")
+
                 finishReason == "SAFETY" ->
-                    ValidationResult(false, "Gemini bloqueó la imagen por filtro de seguridad")
-                raw.isEmpty() ->
-                    ValidationResult(false, "Gemini no devolvió respuesta (finishReason: $finishReason)")
+                    ValidationResult(false, "Foto rechazada: contenido inapropiado detectado")
+
+                finishReason == "NO_CANDIDATES" ->
+                    // El modelo no devolvió ningún candidato — puede ser error de API key o modelo no disponible
+                    ValidationResult(false, "Error de validación: el modelo no respondió (verifica GEMINI_API_KEY en Render)")
+
                 else ->
-                    ValidationResult(false, "Gemini: respuesta inesperada '$raw'")
+                    ValidationResult(false, "Error de validación: respuesta inesperada '$raw' (finishReason=$finishReason)")
             }
+
         } catch (e: Exception) {
-            log.error("Gemini API error: ${e.message}")
+            log.error("Gemini API error: ${e::class.simpleName}: ${e.message}")
             ValidationResult(false, "Error al contactar Gemini: ${e.message}")
         }
     }
 }
 
-// ── Gemini API DTOs (internal) ───────────────────────────────────
+// ── DTOs internos de la Gemini REST API ────────────────────────────
 
 @Serializable
-private data class GeminiRequest(
-    val contents: List<GeminiContent>,
-    val generationConfig: GenerationConfig? = null
-)
-
-@Serializable
-private data class GenerationConfig(val maxOutputTokens: Int)
+private data class GeminiRequest(val contents: List<GeminiContent>)
 
 @Serializable
 private data class GeminiContent(val parts: List<GeminiPart>)
