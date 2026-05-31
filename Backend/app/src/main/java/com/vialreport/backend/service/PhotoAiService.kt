@@ -66,21 +66,17 @@ class PhotoAiService(private val apiKey: String) {
             )
         )
 
-        // Detecta el tipo de clave para usar el método de auth correcto:
-        // - "AIza..." → query param ?key= (AI Studio clásico, v1beta)
-        // - Cualquier otro formato → Bearer token en header (OAuth2 / nuevo AI Studio, v1)
-        val isApiKey = apiKey.startsWith("AIza")
-        val (url, authHeader) = if (isApiKey) {
-            "$BASE_URL/v1beta/models/$MODEL:generateContent?key=$apiKey" to null
-        } else {
-            "$BASE_URL/v1/models/$MODEL:generateContent" to "Bearer $apiKey"
-        }
-        log.info("Gemini auth=${if (isApiKey) "APIKey/v1beta" else "Bearer/v1"} model=$MODEL")
+        // Claves AIza... → ?key= query param + v1beta  (AI Studio clásico)
+        // Claves AQ...   → x-goog-api-key header + v1beta (nuevo AI Studio)
+        val isLegacyKey = apiKey.startsWith("AIza")
+        val url = "$BASE_URL/v1beta/models/$MODEL:generateContent" +
+                  if (isLegacyKey) "?key=$apiKey" else ""
+        log.info("Gemini auth=${if (isLegacyKey) "query-key" else "x-goog-api-key"} model=$MODEL")
 
         return try {
             val httpResponse: HttpResponse = client.post(url) {
                 contentType(ContentType.Application.Json)
-                if (authHeader != null) header(HttpHeaders.Authorization, authHeader)
+                if (!isLegacyKey) header("x-goog-api-key", apiKey)
                 setBody(requestBody)
             }
 
