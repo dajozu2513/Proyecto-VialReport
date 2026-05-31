@@ -61,7 +61,7 @@ class PhotoAiService(private val apiKey: String) {
         )
 
         return try {
-            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey"
+            val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=$apiKey"
             val response: GeminiResponse = client.post(url) {
                 contentType(ContentType.Application.Json)
                 setBody(requestBody)
