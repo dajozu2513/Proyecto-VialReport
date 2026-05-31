@@ -58,7 +58,7 @@ docker run -p 8080:8080 `
   vialreport-backend
 ```
 
-Backend reads all config from env vars: `MONGODB_URI`, `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`, `GEMINI_API_KEY` (get from aistudio.google.com), `UPLOAD_DIR` (default `./uploads`), `PORT` (default 8080).
+Backend reads all config from env vars: `MONGODB_URI`, `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`, `GEMINI_API_KEY` (get from aistudio.google.com — las claves del nuevo AI Studio empiezan con `AQ.` y usan el header `x-goog-api-key`; el modelo es `gemini-flash-latest`), `UPLOAD_DIR` (default `./uploads`), `PORT` (default 8080).
 
 ### API Testing
 
@@ -80,7 +80,7 @@ Neither project has a configured test suite — only a placeholder `ExampleUnitT
 - ✅ Create / Edit / Delete reports with GPS location (FusedLocationProviderClient + Geocoder reverse-geocoding for address auto-fill)
 - ✅ Photo upload during report creation (picker in form, uploaded after save)
 - ✅ Photo upload in detail screen + **delete photo** (X button overlay per photo)
-- ✅ Gemini AI photo validation — strict: only real photos of the 8 declared incident types; returns coded rejection reasons (`NO_NOT_PHOTO`, `NO_OBSCENE`, `NO_UNRELATED`, `NO_UNCLEAR`); fail-closed on API errors
+- ✅ Gemini AI photo validation — model `gemini-flash-latest` via `x-goog-api-key` header + `v1beta` endpoint; acepta fotos reales de incidentes viales, rechaza cartoons/anime/obsceno/no relacionado; fail-closed on API errors
 - ✅ Admin: change report status from detail screen
 - ✅ Admin: stats panel (`AdminStatsScreen` — summary cards + breakdown bars)
 - ✅ Status change history shown in detail screen (`StatusHistorySection`)
