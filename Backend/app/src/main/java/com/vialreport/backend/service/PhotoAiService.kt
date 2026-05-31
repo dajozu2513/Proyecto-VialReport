@@ -26,7 +26,7 @@ class PhotoAiService(private val apiKey: String) {
         }
     }
 
-    private val MODEL    = "gemini-1.5-flash"
+    private val MODEL    = "gemini-flash-latest"
     private val BASE_URL = "https://generativelanguage.googleapis.com"
 
     suspend fun validate(imageBytes: ByteArray, mimeType: String): ValidationResult {
